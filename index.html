@@ -71,7 +71,7 @@ async function runOMR(){
  // Ignore narrow stems and lyric-like components; keep compact notehead candidates.
  let ratio=cw/ch;if(ratio<.55||ratio>2.1)continue;
  let step=Math.round((bottom-cy)/(spacing/2));let diatonic=[64,65,67,69,71,72,74,76,77,79,81,83,84,86,88,89,91,93,95,96,98,100,101,103,105,107,108];
- let pitch=diatonic[Math.max(0,Math.min(diatonic.length-1,step+4))];
+ let pitch=diatonic[Math.max(0,Math.min(diatonic.length-1,step))];
  found.push({x:cx,y:cy,pitch,dur:1,confidence:Math.min(.99,.5+area/(spacing*spacing*3))});
  }
  found.sort((a,b)=>a.x-b.x);
