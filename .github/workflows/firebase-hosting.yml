@@ -22,14 +22,46 @@ jobs:
 
       - name: Verify Hosting files
         run: |
-          test -f index.html
-          test -f firebase.json
-          echo "Firebase Hosting files found."
+          test -f index.html || (echo "::error::index.html não existe na raiz do repositório" && exit 1)
+          test -f firebase.json || (echo "::error::firebase.json não existe na raiz do repositório" && exit 1)
+          echo "Ficheiros do Firebase Hosting encontrados."
+
+      - name: Validate Firebase service-account secret
+        env:
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CONVERTOR_DE_PAUTA }}
+        run: |
+          if [ -z "$FIREBASE_SA_JSON" ]; then
+            echo "::error::O segredo FIREBASE_SERVICE_ACCOUNT_CONVERTOR_DE_PAUTA não existe ou está vazio. Adicione a chave JSON da conta de serviço Firebase em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_SA_JSON" > "$RUNNER_TEMP/firebase-service-account.json"
+          python - <<'PY'
+          import json, os, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "firebase-service-account.json")
+          try:
+              with open(path, encoding="utf-8") as f:
+                  data = json.load(f)
+          except Exception as e:
+              print("::error::O segredo existe, mas não contém JSON válido. Substitua-o pelo ficheiro JSON original da conta de serviço, sem aspas adicionais.")
+              sys.exit(1)
+          required = ("type", "project_id", "private_key", "client_email", "token_uri")
+          missing = [k for k in required if not data.get(k)]
+          if missing:
+              print("::error::A chave JSON não contém os campos obrigatórios: " + ", ".join(missing))
+              sys.exit(1)
+          if data["type"] != "service_account":
+              print("::error::A credencial não é do tipo service_account.")
+              sys.exit(1)
+          if data["project_id"] != "convertor-de-pauta":
+              print("::error::A chave pertence a outro projecto Firebase: " + data["project_id"])
+              sys.exit(1)
+          print("Chave JSON válida e associada ao projecto convertor-de-pauta. O conteúdo secreto não será apresentado.")
+          PY
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CONVERTOR_DE_PAUTA }}
-          channelId: live
           projectId: convertor-de-pauta
+          channelId: live
+          firebaseToolsVersion: 15.4.0
