@@ -33,22 +33,32 @@ jobs:
         run: |
           python - <<'PY'
           import os, json, base64, sys, uuid
-          raw = os.environ.get("FIREBASE_SA_SECRET", "").strip()
+          raw = os.environ.get("FIREBASE_SA_SECRET", "").strip().lstrip("\\ufeff")
           if not raw:
               print("::error::O segredo FIREBASE_SERVICE_ACCOUNT_CONVERTOR_DE_PAUTA está vazio ou indisponível para este workflow.")
               sys.exit(1)
           candidates = [raw]
-          # Accept raw JSON, a JSON string containing JSON, or Base64-encoded JSON.
+          # Common copy/paste formats: fenced JSON, JSON string, Base64 and Base64URL.
+          unfenced = raw
+          if unfenced.startswith("```"):
+              unfenced = unfenced.replace("```json", "", 1).replace("```JSON", "", 1)
+              unfenced = unfenced.replace("```", "").strip()
+              candidates.append(unfenced)
           try:
-              decoded = base64.b64decode(raw, validate=True).decode("utf-8").strip()
+              decoded = base64.b64decode("".join(raw.split()) + "===", validate=False).decode("utf-8-sig").strip()
               candidates.append(decoded)
+          except Exception:
+              pass
+          try:
+              decoded_url = base64.urlsafe_b64decode("".join(raw.split()) + "===" ).decode("utf-8-sig").strip()
+              candidates.append(decoded_url)
           except Exception:
               pass
           data = None
           normalized = None
           for candidate in candidates:
               try:
-                  parsed = json.loads(candidate)
+                  parsed = json.loads(candidate.lstrip("\\ufeff"))
                   if isinstance(parsed, str):
                       parsed = json.loads(parsed)
                   if isinstance(parsed, dict):
