@@ -9,9 +9,9 @@ RUN mkdir -p /tmp/audiveris /opt/audiveris \
  && launcher=$(find /opt /usr -type f \( -name 'Audiveris' -o -name 'audiveris' \) -perm -111 -print -quit) && test -n "$launcher" && ln -sf "$launcher" /usr/local/bin/audiveris && rm -rf /var/lib/apt/lists/* /tmp/audiveris
 
 WORKDIR /app
-COPY requirements.txt .
+COPY omr-service/requirements.txt ./requirements.txt
 RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
-COPY app.py .
+COPY omr-service/app.py ./app.py
 ENV PATH="/opt/venv/bin:$PATH"
 EXPOSE 8000
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
