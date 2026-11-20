@@ -72,7 +72,7 @@ jobs:
               sys.exit(1)
           delimiter = "FIREBASE_JSON_" + uuid.uuid4().hex
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
-              out.write("json<<" + delimiter + "\\n" + normalized + "\\n" + delimiter + "\\n")
+              out.write("json<<" + delimiter + "\n" + normalized + "\n" + delimiter + "\n")
           print("Credencial validada e normalizada. O conteúdo secreto não será apresentado nos logs.")
           PY
 
