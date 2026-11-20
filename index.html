@@ -8,7 +8,8 @@
 :root{--bg:#0b1220;--panel:#131e30;--line:#263750;--txt:#edf3ff;--muted:#9aabc4;--gold:#f4bd55;--blue:#73a7ff}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px system-ui,Arial}header{padding:18px 16px;background:#101a2b;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}header h1{font-size:20px;margin:0}header small{color:var(--muted)}main{max-width:1000px;margin:auto;padding:16px;display:grid;gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px}.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.row>*{flex:1}.btn,button,label.file{border:0;border-radius:10px;padding:12px 14px;background:#263b59;color:white;font-weight:650;cursor:pointer;text-align:center}.primary{background:#d99b32;color:#15100a}.danger{background:#713b45}.file input{display:none}input,select,textarea{background:#0c1524;color:var(--txt);border:1px solid #334963;border-radius:9px;padding:11px;max-width:100%}input[type=text]{width:100%}#preview{width:100%;max-height:300px;object-fit:contain;background:#09101b;border-radius:10px;margin-top:10px;display:none}.hint{color:var(--muted);font-size:13px;line-height:1.5}.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.toolbar button{padding:9px 11px}.staff-wrap{overflow:auto;background:#fff;border-radius:10px;padding:8px}#score{width:100%;min-width:560px;height:300px;touch-action:manipulation}.note{cursor:pointer}.status{padding:10px;border-radius:9px;background:#0b1727;color:#bcd1ef;margin-top:10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:600px){.grid{grid-template-columns:1fr}main{padding:10px}.card{padding:12px}.row .btn{flex-basis:42%}}
 @media print{header,.no-print{display:none!important}body{background:white;color:black}.card{border:0;background:white}#score{min-width:0}}
-</style></head>
+</style><script async src="https://docs.opencv.org/4.x/opencv.js"></script><script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
 <body>
 <header><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></header>
 <main>
@@ -35,7 +36,56 @@ document.querySelector('#addNote').onclick=()=>{snapshot();notes.push({x:120+not
 document.querySelector('#removeNote').onclick=()=>{if(selected<0)return;snapshot();notes.splice(selected,1);selected=-1;draw()};
 document.querySelector('#undo').onclick=()=>{if(history.length){notes=JSON.parse(history.pop());selected=-1;draw()}};
 document.querySelector('#imageFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let u=URL.createObjectURL(f);let im=document.querySelector('#preview');im.src=u;im.style.display='block';document.querySelector('#analysisStatus').textContent='Imagem carregada: '+f.name+'. Toque em “Analisar pauta”.'};
-document.querySelector('#analyze').onclick=()=>{let im=document.querySelector('#preview');if(!im.src){alert('Escolha primeiro uma imagem.');return}document.querySelector('#analysisStatus').textContent='A imagem foi carregada. Esta versão inicial ainda não dispõe de um motor OMR treinado: não consegue reconhecer automaticamente, com fiabilidade, todas as notas e letras. Pode editar a pauta abaixo. O reconhecimento musical completo será integrado numa próxima etapa.';};
+
+// OMR inicial no navegador: detecção geométrica das cinco linhas, cabeças de notas
+// por componentes conectados após remoção das linhas e OCR para texto/lyrics.
+function waitForOpenCV(){return new Promise((resolve,reject)=>{let started=Date.now();(function check(){if(window.cv&&cv.Mat){if(cv.getBuildInformation)resolve();else cv.onRuntimeInitialized=()=>resolve();return}if(Date.now()-started>45000){reject(Error('OpenCV.js não carregou. Verifique a ligação à Internet e tente novamente.'));return}setTimeout(check,250)})()})}
+function matToCanvas(mat){let canvas=document.createElement('canvas');canvas.width=mat.cols;canvas.height=mat.rows;let imageData=new ImageData(new Uint8ClampedArray(mat.data),mat.cols,mat.rows);canvas.getContext('2d').putImageData(imageData,0,0);return canvas}
+async function runOMR(){
+ const im=document.querySelector('#preview');if(!im.src){alert('Escolha primeiro uma imagem.');return}
+ const status=document.querySelector('#analysisStatus'),btn=document.querySelector('#analyze');btn.disabled=true;
+ let src,gray,binary,horiz,vert,clean,labels,stats,centroids,kernel;
+ try{
+ status.textContent='A preparar o motor de reconhecimento...';await waitForOpenCV();
+ const maxW=1800,scale=Math.min(1,maxW/im.naturalWidth),w=Math.round(im.naturalWidth*scale),h=Math.round(im.naturalHeight*scale);
+ const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(im,0,0,w,h);
+ src=cv.imread(canvas);gray=new cv.Mat();binary=new cv.Mat();horiz=new cv.Mat();vert=new cv.Mat();clean=new cv.Mat();
+ cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);cv.GaussianBlur(gray,gray,new cv.Size(3,3),0);
+ cv.adaptiveThreshold(gray,binary,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY_INV,31,12);
+ let hk=Math.max(20,Math.floor(w/30));kernel=cv.getStructuringElement(cv.MORPH_RECT,new cv.Size(hk,1));
+ cv.morphologyEx(binary,horiz,cv.MORPH_OPEN,kernel);kernel.delete();
+ let vk=Math.max(15,Math.floor(h/35));kernel=cv.getStructuringElement(cv.MORPH_RECT,new cv.Size(1,vk));cv.morphologyEx(binary,vert,cv.MORPH_OPEN,kernel);kernel.delete();
+ cv.subtract(binary,horiz,clean);cv.subtract(clean,vert,clean);
+ // detect horizontal staff-line y coordinates by row pixel density
+ let rowScores=[];for(let y=0;y<h;y++){let n=0;for(let x=0;x<w;x++)if(horiz.ucharPtr(y,x)[0]>0)n++;if(n>w*.22)rowScores.push(y)}
+ let lines=[];rowScores.forEach(y=>{if(!lines.length||y-lines[lines.length-1]>2)lines.push(y);else lines[lines.length-1]=Math.round((lines[lines.length-1]+y)/2)});
+ let groups=[];for(let i=0;i<lines.length;){let g=[lines[i]];let j=i+1;while(j<lines.length&&lines[j]-lines[j-1]<h*.035){g.push(lines[j]);j++}if(g.length>=5)groups.push(g);i=j}
+ if(!groups.length)throw Error('Não consegui identificar cinco linhas de pauta. Tente uma imagem mais nítida, direita e com a pauta inteira visível.');
+ let staff=groups.sort((a,b)=>b.length-a.length)[0].slice(0,5),spacing=staff.slice(1).reduce((s,y,i)=>s+y-staff[i],0)/4,top=staff[0],bottom=staff[4];
+ // connected components after suppressing staff lines
+ labels=new cv.Mat();stats=new cv.Mat();centroids=new cv.Mat();let count=cv.connectedComponentsWithStats(clean,labels,stats,centroids,8,cv.CV_32S);
+ let found=[];for(let i=1;i<count;i++){let x=stats.intAt(i,cv.CC_STAT_LEFT),y=stats.intAt(i,cv.CC_STAT_TOP),cw=stats.intAt(i,cv.CC_STAT_WIDTH),ch=stats.intAt(i,cv.CC_STAT_HEIGHT),area=stats.intAt(i,cv.CC_STAT_AREA);
+ if(area<Math.max(8,spacing*spacing*.10)||area>spacing*spacing*5||cw<spacing*.22||cw>spacing*2.2||ch<spacing*.18||ch>spacing*1.8)continue;
+ let cx=centroids.doubleAt(i,0),cy=centroids.doubleAt(i,1);
+ if(cy<top-spacing*1.2||cy>bottom+spacing*1.5)continue;
+ // Ignore narrow stems and lyric-like components; keep compact notehead candidates.
+ let ratio=cw/ch;if(ratio<.55||ratio>2.1)continue;
+ let step=Math.round((bottom-cy)/(spacing/2));let diatonic=[64,65,67,69,71,72,74,76,77,79,81,83,84,86,88,89,91,93,95,96,98,100,101,103,105,107,108];
+ let pitch=diatonic[Math.max(0,Math.min(diatonic.length-1,step+4))];
+ found.push({x:cx,y:cy,pitch,dur:1,confidence:Math.min(.99,.5+area/(spacing*spacing*3))});
+ }
+ found.sort((a,b)=>a.x-b.x);
+ // merge nearby duplicate components
+ found=found.filter((n,i,a)=>i===0||Math.abs(n.x-a[i-1].x)>spacing*.45||Math.abs(n.y-a[i-1].y)>spacing*.4);
+ if(!found.length)throw Error('As pautas foram detectadas, mas não encontrei cabeças de notas suficientemente claras. Experimente uma imagem com maior resolução e bom contraste.');
+ snapshot();notes=found.map(n=>({x:Math.max(80,Math.min(850,80+n.x/w*760)),y:Math.max(65,Math.min(245,110+(n.y-top)/(bottom-top)*80)),pitch:n.pitch,dur:1}));selected=-1;draw();
+ status.textContent='Pauta detectada. '+found.length+' possíveis notas identificadas. As alturas são estimativas em clave de Sol; confirme e corrija as notas no editor. A leitura de ritmos, acidentes, polifonia e letras impressas ainda pode conter erros.';
+ // OCR text; don't overwrite user lyrics when no text is found
+ try{status.textContent+=' A reconhecer letras...';let result=await Tesseract.recognize(canvas,'por+eng');let textFound=(result.data.text||'').trim();if(textFound){document.querySelector('#lyrics').value=textFound;status.textContent+=' Texto OCR encontrado; reveja a transcrição.'}else status.textContent+=' Não foi encontrado texto legível.'}catch(ocrErr){status.textContent+=' OCR de letras indisponível nesta tentativa.'}
+ }catch(e){status.textContent='Falha na análise: '+e.message}
+ finally{[src,gray,binary,horiz,vert,clean,labels,stats,centroids,kernel].forEach(m=>{if(m&&m.delete)try{m.delete()}catch(e){}});btn.disabled=false}
+}
+document.querySelector('#analyze').onclick=runOMR;
 function data(){return{title:document.querySelector('#title').value,lyrics:document.querySelector('#lyrics').value,key:document.querySelector('#key').value,notes,updatedAt:Date.now()}}
 document.querySelector('#save').onclick=async()=>{if(!db){alert('Firebase indisponível');return}try{let ref=db.ref('partituras').push();await ref.set(data());localStorage.setItem('lastScoreId',ref.key);document.querySelector('#dbStatus').textContent='Guardado com sucesso. Código: '+ref.key}catch(e){document.querySelector('#dbStatus').textContent='Não foi possível guardar: '+e.message+' — verifique as regras do Realtime Database.'}};
 document.querySelector('#load').onclick=async()=>{if(!db)return;try{let id=localStorage.getItem('lastScoreId');if(!id){alert('Ainda não existe uma partitura guardada neste dispositivo.');return}let s=(await db.ref('partituras/'+id).get()).val();if(!s)throw Error('Partitura não encontrada');notes=s.notes||[];document.querySelector('#title').value=s.title||'';document.querySelector('#lyrics').value=s.lyrics||'';document.querySelector('#key').value=s.key||'Dó maior';draw();document.querySelector('#dbStatus').textContent='Partitura carregada.'}catch(e){document.querySelector('#dbStatus').textContent=e.message}};
