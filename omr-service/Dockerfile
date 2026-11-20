@@ -1,7 +1,7 @@
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl openjdk-25-jre-headless python3 python3-pip python3-venv && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl python3 python3-pip python3-venv && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /tmp/audiveris /opt/audiveris \
  && curl -fL "https://github.com/Audiveris/audiveris/releases/download/5.11.0/Audiveris-5.11.0-ubuntu24.04-x86_64.deb" -o /tmp/audiveris/audiveris.deb \
