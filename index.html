@@ -104,6 +104,78 @@ body.logged-in #appMain>section:nth-of-type(4) .status{display:none}
   body.logged-in #appMain>section:nth-of-type(4) .toolbar{flex-basis:100%;min-width:0}
   body.logged-in #appMain>section:nth-of-type(4) .toolbar{display:flex;flex-wrap:wrap}
 }
+
+/* Final compact phone workstation: one top command bar and one scrollable score canvas */
+@media(max-width:650px){
+  body.logged-in{height:100dvh;min-height:100dvh;overflow:hidden}
+  body.logged-in #appHeader{
+    position:sticky;top:0;z-index:50;
+    display:flex;flex-direction:column;align-items:stretch;gap:7px;
+    padding:7px 9px;background:#101a2b;
+  }
+  body.logged-in #appHeader .brand{display:flex;align-items:center;gap:8px}
+  body.logged-in #appHeader h1{font-size:15px;line-height:1.1}
+  body.logged-in #appHeader small{display:none}
+  body.logged-in #topTools{
+    display:flex!important;flex-direction:row;flex-wrap:nowrap;
+    justify-content:flex-start;align-items:center;gap:6px;
+    width:100%;overflow-x:auto;overflow-y:hidden;
+    scrollbar-width:none;white-space:nowrap;padding-bottom:2px;
+  }
+  body.logged-in #topTools::-webkit-scrollbar{display:none}
+  body.logged-in #topTools button,
+  body.logged-in #topTools .topbtn{
+    display:inline-flex;align-items:center;justify-content:center;
+    flex:0 0 auto;padding:8px 10px;font-size:11px;min-height:36px;
+  }
+  body.logged-in #appMain{
+    display:flex!important;flex-direction:column;
+    height:calc(100dvh - 82px)!important;min-height:0!important;
+    max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;
+    padding:7px 8px calc(14px + env(safe-area-inset-bottom));
+    gap:8px;
+  }
+  /* Hide the redundant import panel: upload and analyse are in the header. */
+  body.logged-in #appMain>section:nth-of-type(2){display:none!important}
+  body.logged-in #appMain>section:nth-of-type(3){
+    display:flex!important;flex:1 0 auto!important;flex-direction:column;
+    min-height:0!important;height:auto!important;overflow:visible!important;
+    padding:9px;background:#131e30;
+  }
+  body.logged-in #appMain>section:nth-of-type(3)>h2{font-size:17px;margin:0 0 7px}
+  body.logged-in #appMain>section:nth-of-type(3)>.toolbar{display:none!important}
+  body.logged-in #appMain>section:nth-of-type(3)>.staff-wrap{
+    display:block!important;position:relative;flex:0 0 auto!important;
+    width:100%;height:58dvh;min-height:280px;max-height:620px;
+    overflow:auto!important;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;touch-action:pan-x pan-y;
+    background:#fff;border-radius:10px;padding:8px;
+  }
+  body.logged-in #appMain>section:nth-of-type(3) #score{
+    display:block;width:900px!important;min-width:900px!important;
+    height:900px!important;min-height:900px!important;max-width:none!important;
+    touch-action:pan-x pan-y;
+  }
+  body.logged-in #appMain>section:nth-of-type(3)>.grid{
+    display:grid!important;grid-template-columns:1fr!important;
+    gap:8px;margin-top:8px!important;
+  }
+  body.logged-in #appMain>section:nth-of-type(3)>.grid>div:first-child{display:none!important}
+  body.logged-in #appMain>section:nth-of-type(3)>.grid>div:last-child{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  body.logged-in #appMain>section:nth-of-type(3)>.grid>div:last-child p{grid-column:1/-1;margin:3px 0}
+  body.logged-in #appMain>section:nth-of-type(4){
+    display:flex!important;flex:0 0 auto!important;flex-direction:column;
+    align-items:stretch;gap:6px;padding:8px;
+  }
+  body.logged-in #appMain>section:nth-of-type(4)>h2,
+  body.logged-in #appMain>section:nth-of-type(4)>p{display:none!important}
+  body.logged-in #appMain>section:nth-of-type(4)>.row,
+  body.logged-in #appMain>section:nth-of-type(4)>.toolbar{
+    display:flex!important;flex-wrap:wrap;gap:6px;margin:0;width:100%;
+  }
+  body.logged-in #appMain>section:nth-of-type(4) .row>*,
+  body.logged-in #appMain>section:nth-of-type(4) .toolbar>*{flex:1 1 42%;min-width:0}
+}
 </style></head>
 <body>
 <header id="appHeader"><div class="brand"><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></div><nav id="topTools" hidden><label class="topbtn">Carregar pauta<input id="topImage" type="file" accept="image/*" hidden></label><button id="topAnalyze" class="primary">Analisar / Converter</button><button id="topSave">Guardar</button><button id="topExport">Exportar PDF</button><button id="topExit" class="danger">Sair</button></nav></header>
