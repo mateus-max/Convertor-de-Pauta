@@ -9,10 +9,55 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px system-ui,Arial}header{padding:18px 16px;background:#101a2b;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}header h1{font-size:20px;margin:0}header small{color:var(--muted)}main{max-width:1000px;margin:auto;padding:16px;display:grid;gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px}.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.row>*{flex:1}.btn,button,label.file{border:0;border-radius:10px;padding:12px 14px;background:#263b59;color:white;font-weight:650;cursor:pointer;text-align:center}.primary{background:#d99b32;color:#15100a}.danger{background:#713b45}.file input{display:none}input,select,textarea{background:#0c1524;color:var(--txt);border:1px solid #334963;border-radius:9px;padding:11px;max-width:100%}input[type=text]{width:100%}#preview{width:100%;max-height:300px;object-fit:contain;background:#09101b;border-radius:10px;margin-top:10px;display:none}.hint{color:var(--muted);font-size:13px;line-height:1.5}.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.toolbar button{padding:9px 11px}.staff-wrap{overflow:auto;background:#fff;border-radius:10px;padding:8px}#score{width:100%;min-width:560px;height:300px;touch-action:manipulation}.note{cursor:pointer}.status{padding:10px;border-radius:9px;background:#0b1727;color:#bcd1ef;margin-top:10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:600px){.grid{grid-template-columns:1fr}main{padding:10px}.card{padding:12px}.row .btn{flex-basis:42%}}
 @media print{header,.no-print{display:none!important}body{background:white;color:black}.card{border:0;background:white}#score{min-width:0}}
 </style><script async src="https://docs.opencv.org/4.x/opencv.js"></script><script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-</head>
+
+<style>
+/* Full-screen application layout */
+html,body{width:100%;height:100%;min-height:100%;overflow-x:hidden}
+body{min-height:100dvh}
+#appHeader{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;min-height:64px}
+#appHeader .brand{flex:0 0 auto}#appHeader h1{font-size:18px}#appHeader small{font-size:11px}
+#topTools{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+#topTools button,#topTools .topbtn{padding:9px 11px;font-size:12px;white-space:nowrap}
+#topTools .topbtn{background:#263b59;border-radius:9px;font-weight:700;cursor:pointer}
+#appMain{max-width:none;width:100%;height:calc(100dvh - 64px);margin:0;padding:10px;display:flex;flex-direction:column;gap:9px;overflow:auto}
+#accountCard{width:min(460px,calc(100vw - 24px));margin:auto;flex:0 0 auto}
+body.logged-in #accountCard{display:none}
+body:not(.logged-in) #appMain>*:not(#accountCard){display:none!important}
+body:not(.logged-in) #topTools{display:none!important}
+body.logged-in #topTools{display:flex}
+body.logged-in #appMain{height:calc(100dvh - 64px);overflow:hidden}
+body.logged-in #appMain>section{display:none}
+body.logged-in #appMain>section:nth-of-type(2){display:flex;flex:0 0 auto;align-items:center;gap:8px;padding:8px 12px}
+body.logged-in #appMain>section:nth-of-type(2) h2,body.logged-in #appMain>section:nth-of-type(2) p{display:none}
+body.logged-in #appMain>section:nth-of-type(2) .row{flex:1}
+body.logged-in #preview{display:none!important}
+body.logged-in #analysisStatus{margin:0;max-width:42%;font-size:11px}
+body.logged-in #appMain>section:nth-of-type(3){display:flex;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden}
+body.logged-in #appMain>section:nth-of-type(3) h2{margin:0 0 5px}
+body.logged-in #appMain>section:nth-of-type(3) .toolbar{display:none}
+body.logged-in .staff-wrap{flex:1;min-height:220px;overflow:auto}
+body.logged-in #score{height:100%;min-height:280px;min-width:700px}
+body.logged-in #appMain>section:nth-of-type(3) .grid{grid-template-columns:1fr 220px}
+body.logged-in #appMain>section:nth-of-type(4){display:flex;flex:0 0 auto;align-items:center;gap:8px;padding:8px 12px}
+body.logged-in #appMain>section:nth-of-type(4) h2,body.logged-in #appMain>section:nth-of-type(4) p{display:none}
+body.logged-in #appMain>section:nth-of-type(4) .row,body.logged-in #appMain>section:nth-of-type(4) .toolbar{margin:0;flex:1}
+body.logged-in #appMain>section:nth-of-type(4) .status{display:none}
+@media(max-width:650px){
+ #appHeader{align-items:flex-start;flex-direction:column;gap:6px;padding:8px 10px}
+ #topTools{width:100%;justify-content:space-between;gap:5px}
+ #topTools button,#topTools .topbtn{font-size:11px;padding:8px 9px}
+ body.logged-in #appMain{height:calc(100dvh - 104px);padding:6px}
+ body.logged-in #appMain>section:nth-of-type(2){flex-wrap:wrap}
+ body.logged-in #analysisStatus{max-width:100%;width:100%}
+ body.logged-in #appMain>section:nth-of-type(3) .grid{grid-template-columns:1fr}
+ body.logged-in #appMain>section:nth-of-type(3) .grid>div:first-child{display:none}
+ body.logged-in #appMain>section:nth-of-type(4){flex-wrap:wrap}
+ body.logged-in #appMain>section:nth-of-type(4) .row,body.logged-in #appMain>section:nth-of-type(4) .toolbar{flex-basis:100%}
+}
+</style></head>
 <body>
-<header><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></header>
-<main>
+<header id="appHeader"><div class="brand"><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></div><nav id="topTools" hidden><label class="topbtn">Carregar pauta<input id="topImage" type="file" accept="image/*" hidden></label><button id="topAnalyze" class="primary">Analisar / Converter</button><button id="topSave">Guardar</button><button id="topExport">Exportar PDF</button><button id="topExit" class="danger">Sair</button></nav></header>
+<main id="appMain">
 <section class="card" id="accountCard"><h2>Conta privada</h2><p class="hint">Crie uma conta ou entre para manter as suas partituras privadas.</p><div class="grid"><input id="authEmail" type="email" autocomplete="email" placeholder="O seu e-mail"><input id="authPassword" type="password" autocomplete="current-password" placeholder="Palavra-passe (mínimo 6 caracteres)"></div><div class="row" style="margin-top:10px"><button id="signIn" class="primary">Entrar</button><button id="signUp">Criar conta</button><button id="signOut" class="danger" hidden>Sair</button></div><div id="authStatus" class="status" aria-live="polite">Entre ou crie a sua conta para guardar partituras privadas.</div></section>
 <section class="card"><h2>1. Importar partitura</h2><p class="hint">Carregue uma fotografia ou imagem (JPG, PNG ou WEBP). A análise é feita no próprio dispositivo; a imagem não é enviada para armazenamento na nuvem.</p>
 <div class="row"><label class="file primary">📷 Escolher imagem<input id="imageFile" type="file" accept="image/*"></label><button id="analyze" class="btn">✨ Analisar pauta</button></div><img id="preview" alt="Pré-visualização da partitura"><div id="analysisStatus" class="status">Aguardando uma imagem.</div>
@@ -29,7 +74,7 @@
 const firebaseConfig={apiKey:"AIzaSyDgOs5W_dKjyVG2p8PJz9p6q7YQFhqHRSA",authDomain:"convertor-de-pauta.firebaseapp.com",databaseURL:"https://convertor-de-pauta-default-rtdb.firebaseio.com",projectId:"convertor-de-pauta",storageBucket:"convertor-de-pauta.firebasestorage.app",messagingSenderId:"574758470845",appId:"1:574758470845:web:c4ae8754855a6872cfe3d4",measurementId:"G-W1TGSJF30T"};
 let db=null,auth=null,currentUser=null;try{firebase.initializeApp(firebaseConfig);db=firebase.database();auth=firebase.auth();document.querySelector('#dbStatus').textContent='Firebase inicializado. Entre na sua conta para guardar.'}catch(e){document.querySelector('#dbStatus').textContent='Firebase: '+e.message}
 const authStatus=document.querySelector('#authStatus');
-auth.onAuthStateChanged(user=>{currentUser=user||null;document.querySelector('#signOut').hidden=!user;document.querySelector('#signIn').hidden=!!user;document.querySelector('#signUp').hidden=!!user;document.querySelector('#authEmail').disabled=!!user;document.querySelector('#authPassword').disabled=!!user;authStatus.textContent=user?'Sessão iniciada: '+user.email+'. As suas partituras são privadas.':'Entre ou crie a sua conta para guardar partituras privadas.';document.querySelector('#dbStatus').textContent=user?'Conta ligada. As partituras serão guardadas na sua área privada.':'Entre na sua conta para aceder às suas partituras.'});
+auth.onAuthStateChanged(user=>{currentUser=user||null;document.body.classList.toggle('logged-in',!!user);document.querySelector('#topTools').hidden=!user;document.querySelector('#signOut').hidden=!user;document.querySelector('#signIn').hidden=!!user;document.querySelector('#signUp').hidden=!!user;document.querySelector('#authEmail').disabled=!!user;document.querySelector('#authPassword').disabled=!!user;authStatus.textContent=user?'Sessão iniciada: '+user.email+'.':'Entre ou crie a sua conta para continuar.';document.querySelector('#dbStatus').textContent=user?'Conta ligada.':'Entre na sua conta.'});
 document.querySelector('#signUp').onclick=async()=>{try{const email=document.querySelector('#authEmail').value.trim(),password=document.querySelector('#authPassword').value;if(!email||password.length<6)throw Error('Introduza um e-mail válido e uma palavra-passe com pelo menos 6 caracteres.');await auth.createUserWithEmailAndPassword(email,password);authStatus.textContent='Conta criada com sucesso.'}catch(e){authStatus.textContent=authError(e)}};
 document.querySelector('#signIn').onclick=async()=>{try{await auth.signInWithEmailAndPassword(document.querySelector('#authEmail').value.trim(),document.querySelector('#authPassword').value);authStatus.textContent='Sessão iniciada.'}catch(e){authStatus.textContent=authError(e)}};
 document.querySelector('#signOut').onclick=()=>auth.signOut();
@@ -138,4 +183,10 @@ document.querySelector('#pdf').onclick=()=>window.print();
 let ctx=null,osc=[];document.querySelector('#play').onclick=()=>{document.querySelector('#stop').click();ctx=new(window.AudioContext||window.webkitAudioContext)();let t=ctx.currentTime;notes.forEach(n=>{let o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=440*Math.pow(2,(n.pitch-69)/12);g.gain.setValueAtTime(.001,t);g.gain.linearRampToValueAtTime(.16,t+.03);g.gain.setValueAtTime(.16,t+.35);g.gain.linearRampToValueAtTime(.001,t+.48);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+.5);osc.push(o);t+=.5})};
 document.querySelector('#stop').onclick=()=>{osc.forEach(o=>{try{o.stop()}catch(e){}});osc=[]};
 document.querySelector('#wav').onclick=()=>{let rate=44100,duration=Math.max(1,notes.length*.5),buf=new ArrayBuffer(44+rate*duration*2),v=new DataView(buf);function str(o,s){for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))}str(0,'RIFF');v.setUint32(4,36+rate*duration*2,true);str(8,'WAVE');str(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);str(36,'data');v.setUint32(40,rate*duration*2,true);let pos=44;notes.forEach((n,i)=>{let f=440*Math.pow(2,(n.pitch-69)/12);for(let j=0;j<rate*.5;j++){let env=Math.min(1,j/500,(rate*.5-j)/3000);v.setInt16(pos,Math.max(-1,Math.min(1,Math.sin(2*Math.PI*f*j/rate)*.25*env))*32767,true);pos+=2}});download(new Blob([buf],{type:'audio/wav'}),'partitura.wav')};
+
+document.querySelector('#topImage').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const dt=new DataTransfer();dt.items.add(file);document.querySelector('#imageFile').files=dt.files;document.querySelector('#imageFile').dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('#analysisStatus').textContent='Imagem carregada. Toque em Analisar / Converter.'});
+document.querySelector('#topAnalyze').onclick=()=>document.querySelector('#analyze').click();
+document.querySelector('#topSave').onclick=()=>document.querySelector('#save').click();
+document.querySelector('#topExport').onclick=()=>document.querySelector('#pdf').click();
+document.querySelector('#topExit').onclick=()=>auth.signOut();
 </script></body></html>
