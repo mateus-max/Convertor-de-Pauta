@@ -18,7 +18,7 @@ body{min-height:100dvh}
 #appHeader .brand{flex:0 0 auto}#appHeader h1{font-size:18px}#appHeader small{font-size:11px}
 #topTools{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
 #topTools button,#topTools .topbtn{padding:9px 11px;font-size:12px;white-space:nowrap}
-#topTools .topbtn{background:#263b59;border-radius:9px;font-weight:700;cursor:pointer}
+#topTools .topbtn{position:relative;display:inline-flex;align-items:center;justify-content:center;background:#263b59;border-radius:9px;font-weight:700;cursor:pointer;overflow:hidden}
 #appMain{max-width:none;width:100%;height:calc(100dvh - 64px);margin:0;padding:10px;display:flex;flex-direction:column;gap:9px;overflow:auto}
 #accountCard{width:min(460px,calc(100vw - 24px));margin:auto;flex:0 0 auto}
 body.logged-in #accountCard{display:none}
@@ -231,7 +231,7 @@ body.logged-in #appMain>section:nth-of-type(3){padding:0;border:0;background:#ff
 }
 </style></head>
 <body>
-<header id="appHeader"><div class="brand"><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></div><nav id="topTools" hidden><label class="topbtn">Carregar pauta<input id="topImage" type="file" accept="image/*" multiple hidden></label><button id="topAnalyze" class="primary">Converter para edição</button><button id="addNote">＋ Nota</button><button id="removeNote" class="danger">Apagar nota</button><button id="undo">Desfazer</button><button id="play">Reproduzir</button><button id="stop">Parar</button><button id="topSave">Guardar</button><button id="load">Abrir</button><button id="midi">MIDI</button><button id="topExport">PDF</button><button id="wav">WAV</button><button id="topExit" class="danger">Sair</button></nav></header>
+<header id="appHeader"><div class="brand"><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></div><nav id="topTools" hidden><label class="topbtn">Carregar pauta<input id="topImage" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff" multiple style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer"></label><button id="topAnalyze" class="primary">Converter para edição</button><button id="addNote">＋ Nota</button><button id="removeNote" class="danger">Apagar nota</button><button id="undo">Desfazer</button><button id="play">Reproduzir</button><button id="stop">Parar</button><button id="topSave">Guardar</button><button id="load">Abrir</button><button id="midi">MIDI</button><button id="topExport">PDF</button><button id="wav">WAV</button><button id="topExit" class="danger">Sair</button></nav></header>
 <main id="appMain">
 <section class="card" id="accountCard"><h2>Conta privada</h2><p class="hint">Crie uma conta ou entre para manter as suas partituras privadas.</p><div class="grid"><input id="authEmail" type="email" autocomplete="email" placeholder="O seu e-mail"><input id="authPassword" type="password" autocomplete="current-password" placeholder="Palavra-passe (mínimo 6 caracteres)"></div><div class="row" style="margin-top:10px"><button id="signIn" class="primary">Entrar</button><button id="signUp">Criar conta</button><button id="signOut" class="danger" hidden>Sair</button></div><div id="authStatus" class="status" aria-live="polite">Entre ou crie a sua conta para guardar partituras privadas.</div></section>
 <section class="card"><h2>1. Importar partitura</h2><p class="hint">Carregue uma fotografia ou imagem (JPG, PNG ou WEBP). A análise é feita no próprio dispositivo; a imagem não é enviada para armazenamento na nuvem.</p>
@@ -259,22 +259,23 @@ function snapshot(){history.push(JSON.stringify(notes));if(history.length>30)his
 document.querySelector('#addNote').onclick=()=>{if(!loadedPages.length)return;snapshot();notes.push({x:397,y:560,pitch:64,dur:1});selected=notes.length-1;draw()};
 document.querySelector('#removeNote').onclick=()=>{if(selected<0)return;snapshot();notes.splice(selected,1);selected=-1;draw()};
 document.querySelector('#undo').onclick=()=>{if(history.length){notes=JSON.parse(history.pop());selected=-1;draw()}};
- function showUploadedFiles(fileList){
- const files=Array.from(fileList||[]).filter(f=>f&&(/^image\\//.test(f.type)||/\\.(png|jpe?g|webp|bmp|tiff?)$/i.test(f.name)));
+function showUploadedFiles(fileList){
+ const files=Array.from(fileList||[]);
  const status=document.querySelector('#analysisStatus');
- if(!files.length){status.textContent='Seleccione uma imagem JPG, PNG, WEBP ou TIFF.';return}
+ if(!files.length){status.textContent='Nenhum ficheiro seleccionado.';return}
  loadedPages.forEach(p=>{try{URL.revokeObjectURL(p.url)}catch(e){}});
  loadedPages=files.map(file=>({file,url:URL.createObjectURL(file)}));
  notes=[];textItems=[];selected=-1;selectedText=-1;sourceImage=null;
  const host=document.querySelector('#a4Pages');host.replaceChildren();
- status.textContent='A abrir '+files.length+' página(s)...';
+ status.textContent='A carregar '+files.length+' página(s)...';
  let completed=0,failed=0;
  loadedPages.forEach((p,i)=>{
   const page=document.createElement('div');page.className='a4-page';page.dataset.page=String(i+1);
   const img=document.createElement('img');img.alt='Partitura carregada — página '+(i+1);
-  img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;background:white';
-  img.onload=()=>{completed++;if(i===0){sourceWidth=img.naturalWidth;sourceHeight=img.naturalHeight}if(completed+failed===loadedPages.length)status.textContent=failed?('Carregadas '+completed+' de '+loadedPages.length+' páginas. '+failed+' ficheiro(s) não abriram.'):('Imagem apresentada integralmente em '+completed+' folha(s) A4. Agora clique em Converter para edição.');};
-  img.onerror=()=>{failed++;if(completed+failed===loadedPages.length)status.textContent='Não foi possível abrir '+failed+' imagem(ns). Converta para JPG ou PNG.'};
+  img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;background:#fff';
+  img.onload=()=>{completed++;if(i===0){sourceWidth=img.naturalWidth;sourceHeight=img.naturalHeight}
+   if(completed+failed===loadedPages.length)status.textContent=failed?'Carregadas '+completed+' de '+loadedPages.length+' páginas; '+failed+' não abriram.':'Imagem apresentada integralmente em '+completed+' folha(s) A4. Clique em Converter para edição.'};
+  img.onerror=()=>{failed++;if(completed+failed===loadedPages.length)status.textContent='Não foi possível descodificar a imagem. Tente guardar a fotografia como JPG ou PNG.'};
   img.src=p.url;page.append(img);
   if(i===0){svg.setAttribute('viewBox','0 0 794 1123');svg.style.cssText='position:absolute;inset:0;width:100%;height:100%;min-width:0;background:transparent;touch-action:pan-y';page.append(svg)}
   host.append(page);
@@ -283,8 +284,8 @@ document.querySelector('#undo').onclick=()=>{if(history.length){notes=JSON.parse
  document.querySelector('#title').value=files[0].name.replace(/\\.[^.]+$/,'')||'Minha partitura';
  document.querySelector('#a4Pages').scrollTop=0;
 }
-document.querySelector('#imageFile').addEventListener('change',e=>showUploadedFiles(e.target.files));
 document.querySelector('#topImage').addEventListener('change',e=>showUploadedFiles(e.target.files));
+document.querySelector('#imageFile').addEventListener('change',e=>showUploadedFiles(e.target.files));
 
 // OMR melhorado: detecção de vários sistemas, remoção morfológica das linhas,
 // componentes candidatos a cabeças de notas, quantização diatónica e OCR assistido.
@@ -308,7 +309,7 @@ function midiForStaffStep(step){
  const ix=Math.max(0,Math.min(scale.length-1,step));return scale[ix];
 }
 async function runOMR(){
- const im=document.querySelector('#preview');if(!loadedPages.length){alert('Carregue primeiro uma imagem de partitura.');return}const workImage=new Image();workImage.src=loadedPages[0].url;await new Promise((resolve,reject)=>{workImage.onload=resolve;workImage.onerror=reject});
+ if(!loadedPages.length){alert('Carregue primeiro uma imagem de partitura.');return}const workImage=new Image();workImage.src=loadedPages[0].url;await new Promise((resolve,reject)=>{workImage.onload=resolve;workImage.onerror=reject});
  const status=document.querySelector('#analysisStatus'),btn=document.querySelector('#analyze');btn.disabled=true;
  let mats=[];
  try{
@@ -363,7 +364,7 @@ async function runOMR(){
     return{x:Math.max(0,Math.min(794,n.x/w*794)),y:Math.max(0,Math.min(1123,n.y/h*1123)),pitch,dur:1,omrConfidence:Math.round(Math.min(.95,.42+n.compact*.45)*100)};
   });
   selected=-1;draw();
-  status.textContent='Análise concluída: '+staffs.length+' sistema(s), '+notes.length+' possíveis cabeças de notas. As posições foram quantizadas para linhas e espaços. Confirme cada nota: a versão actual ainda não determina com segurança figuras rítmicas, acidentes, armaduras, ligaduras, vozes simultâneas ou instrumentos.';
+  status.textContent='Página 1 analisada ('+loadedPages.length+' página(s) carregada(s)): '+staffs.length+' sistema(s), '+notes.length+' possíveis cabeças de notas. As posições foram quantizadas para linhas e espaços. Confirme cada nota: a versão actual ainda não determina com segurança figuras rítmicas, acidentes, armaduras, ligaduras, vozes simultâneas ou instrumentos.';
   // OCR is optional and only fills the lyrics field when it returns useful text.
   if(window.Tesseract){try{status.textContent+=' A reconhecer texto...';const result=await Tesseract.recognize(canvas,'por+eng',{logger:m=>{if(m.status==='recognizing text')status.textContent='OCR: '+Math.round((m.progress||0)*100)+'%'}});const txt=(result.data.text||'').trim();if(txt){document.querySelector('#lyrics').value=txt;textItems=(result.data.words||[]).filter(word=>word.text&&word.bbox).map(word=>({text:word.text,x:Math.max(0,word.bbox.x0/w*794),y:Math.max(12,word.bbox.y1/h*1123),size:Math.max(9,(word.bbox.y1-word.bbox.y0)/h*1123)}));draw();status.textContent+=' Texto reconhecido. Toque duas vezes numa palavra para a editar e arraste para reposicionar.'}else status.textContent+=' Não foi detectado texto legível.'}catch(e){status.textContent+=' O OCR não terminou; as notas detectadas foram mantidas.'}}
  }catch(e){status.textContent='Não foi possível concluir a análise: '+(e&&e.message?e.message:String(e))}
@@ -383,7 +384,7 @@ document.querySelector('#stop').onclick=()=>{osc.forEach(o=>{try{o.stop()}catch(
 document.querySelector('#wav').onclick=()=>{let rate=44100,duration=Math.max(1,notes.length*.5),buf=new ArrayBuffer(44+rate*duration*2),v=new DataView(buf);function str(o,s){for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))}str(0,'RIFF');v.setUint32(4,36+rate*duration*2,true);str(8,'WAVE');str(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);str(36,'data');v.setUint32(40,rate*duration*2,true);let pos=44;notes.forEach((n,i)=>{let f=440*Math.pow(2,(n.pitch-69)/12);for(let j=0;j<rate*.5;j++){let env=Math.min(1,j/500,(rate*.5-j)/3000);v.setInt16(pos,Math.max(-1,Math.min(1,Math.sin(2*Math.PI*f*j/rate)*.25*env))*32767,true);pos+=2}});download(new Blob([buf],{type:'audio/wav'}),'partitura.wav')};
 
 
-document.querySelector('#topAnalyze').onclick=()=>document.querySelector('#analyze').click();
+document.querySelector('#topAnalyze').onclick=()=>{if(!loadedPages.length){document.querySelector('#analysisStatus').textContent='Primeiro carregue uma fotografia ou imagem da partitura.';document.querySelector('#topImage').click();return}document.querySelector('#analyze').click()};
 document.querySelector('#topSave').onclick=saveScore;
 document.querySelector('#topExport').onclick=()=>window.print();
 document.querySelector('#topExit').onclick=()=>auth.signOut();
