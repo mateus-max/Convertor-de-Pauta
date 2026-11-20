@@ -38,22 +38,21 @@ jobs:
               print("::error::O segredo FIREBASE_SERVICE_ACCOUNT_CONVERTOR_DE_PAUTA está vazio ou indisponível para este workflow.")
               sys.exit(1)
           candidates = [raw]
-          # Common copy/paste formats: fenced JSON, JSON string, Base64 and Base64URL.
-          unfenced = raw
-          if unfenced.startswith("```"):
-              unfenced = unfenced.replace("```json", "", 1).replace("```JSON", "", 1)
-              unfenced = unfenced.replace("```", "").strip()
-              candidates.append(unfenced)
-          try:
-              decoded = base64.b64decode("".join(raw.split()) + "===", validate=False).decode("utf-8-sig").strip()
-              candidates.append(decoded)
-          except Exception:
-              pass
-          try:
-              decoded_url = base64.urlsafe_b64decode("".join(raw.split()) + "===" ).decode("utf-8-sig").strip()
-              candidates.append(decoded_url)
-          except Exception:
-              pass
+          # Accept raw JSON, fenced/copied JSON, JSON strings, and Base64/Base64URL.
+          unfenced = raw.replace("```json", "").replace("```JSON", "").replace("```", "").strip()
+          candidates.append(unfenced)
+          # Mobile clipboard/file viewers sometimes add text around the JSON.
+          if "{" in unfenced and "}" in unfenced:
+              candidates.append(unfenced[unfenced.find("{"):unfenced.rfind("}") + 1])
+          compact = "".join(raw.split())
+          for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+              try:
+                  decoded = decoder(compact + "===" ).decode("utf-8-sig").strip()
+                  candidates.append(decoded)
+                  if "{" in decoded and "}" in decoded:
+                      candidates.append(decoded[decoded.find("{"):decoded.rfind("}") + 1])
+              except Exception:
+                  pass
           data = None
           normalized = None
           for candidate in candidates:
