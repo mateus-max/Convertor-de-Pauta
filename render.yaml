@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: convertor-de-pauta-omr
+    runtime: docker
+    dockerfilePath: ./omr-service/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
