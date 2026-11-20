@@ -26,42 +26,60 @@ jobs:
           test -f firebase.json || (echo "::error::firebase.json não existe na raiz do repositório" && exit 1)
           echo "Ficheiros do Firebase Hosting encontrados."
 
-      - name: Validate Firebase service-account secret
+      - name: Validate and normalize Firebase service-account secret
+        id: credentials
         env:
-          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CONVERTOR_DE_PAUTA }}
+          FIREBASE_SA_SECRET: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CONVERTOR_DE_PAUTA }}
         run: |
-          if [ -z "$FIREBASE_SA_JSON" ]; then
-            echo "::error::O segredo FIREBASE_SERVICE_ACCOUNT_CONVERTOR_DE_PAUTA não existe ou está vazio. Adicione a chave JSON da conta de serviço Firebase em Settings > Secrets and variables > Actions."
-            exit 1
-          fi
-          printf '%s' "$FIREBASE_SA_JSON" > "$RUNNER_TEMP/firebase-service-account.json"
           python - <<'PY'
-          import json, os, sys
-          path = os.path.join(os.environ["RUNNER_TEMP"], "firebase-service-account.json")
+          import os, json, base64, sys, uuid
+          raw = os.environ.get("FIREBASE_SA_SECRET", "").strip()
+          if not raw:
+              print("::error::O segredo FIREBASE_SERVICE_ACCOUNT_CONVERTOR_DE_PAUTA está vazio ou indisponível para este workflow.")
+              sys.exit(1)
+          candidates = [raw]
+          # Accept raw JSON, a JSON string containing JSON, or Base64-encoded JSON.
           try:
-              with open(path, encoding="utf-8") as f:
-                  data = json.load(f)
-          except Exception as e:
-              print("::error::O segredo existe, mas não contém JSON válido. Substitua-o pelo ficheiro JSON original da conta de serviço, sem aspas adicionais.")
+              decoded = base64.b64decode(raw, validate=True).decode("utf-8").strip()
+              candidates.append(decoded)
+          except Exception:
+              pass
+          data = None
+          normalized = None
+          for candidate in candidates:
+              try:
+                  parsed = json.loads(candidate)
+                  if isinstance(parsed, str):
+                      parsed = json.loads(parsed)
+                  if isinstance(parsed, dict):
+                      data, normalized = parsed, json.dumps(parsed)
+                      break
+              except Exception:
+                  continue
+          if data is None:
+              print("::error::O segredo existe, mas não é JSON válido nem Base64 de JSON. No GitHub, edite o segredo e cole o conteúdo integral do ficheiro .json descarregado do Firebase, começando por { e terminando em }, sem aspas externas.")
               sys.exit(1)
           required = ("type", "project_id", "private_key", "client_email", "token_uri")
-          missing = [k for k in required if not data.get(k)]
+          missing = [key for key in required if not data.get(key)]
           if missing:
-              print("::error::A chave JSON não contém os campos obrigatórios: " + ", ".join(missing))
+              print("::error::A credencial não tem os campos obrigatórios: " + ", ".join(missing))
               sys.exit(1)
           if data["type"] != "service_account":
               print("::error::A credencial não é do tipo service_account.")
               sys.exit(1)
           if data["project_id"] != "convertor-de-pauta":
-              print("::error::A chave pertence a outro projecto Firebase: " + data["project_id"])
+              print("::error::A chave pertence ao projecto '" + str(data["project_id"]) + "', mas o projecto esperado é 'convertor-de-pauta'.")
               sys.exit(1)
-          print("Chave JSON válida e associada ao projecto convertor-de-pauta. O conteúdo secreto não será apresentado.")
+          delimiter = "FIREBASE_JSON_" + uuid.uuid4().hex
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write("json<<" + delimiter + "\\n" + normalized + "\\n" + delimiter + "\\n")
+          print("Credencial validada e normalizada. O conteúdo secreto não será apresentado nos logs.")
           PY
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CONVERTOR_DE_PAUTA }}
+          firebaseServiceAccount: ${{ steps.credentials.outputs.json }}
           projectId: convertor-de-pauta
           channelId: live
           firebaseToolsVersion: 15.4.0
