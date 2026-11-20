@@ -54,6 +54,56 @@ body.logged-in #appMain>section:nth-of-type(4) .status{display:none}
  body.logged-in #appMain>section:nth-of-type(4){flex-wrap:wrap}
  body.logged-in #appMain>section:nth-of-type(4) .row,body.logged-in #appMain>section:nth-of-type(4) .toolbar{flex-basis:100%}
 }
+
+/* Mobile: keep the tool ribbon fixed, but allow the workspace and score to scroll vertically */
+@media(max-width:650px){
+  body.logged-in{height:auto;min-height:100dvh;overflow-y:auto;overflow-x:hidden}
+  body.logged-in #appHeader{position:sticky;top:0;z-index:20}
+  body.logged-in #appMain{
+    display:flex!important;
+    height:auto!important;
+    min-height:calc(100dvh - 104px);
+    max-height:none!important;
+    overflow:visible!important;
+    padding:6px 8px calc(24px + env(safe-area-inset-bottom));
+  }
+  body.logged-in #appMain>section:nth-of-type(3){
+    display:flex!important;
+    flex:0 0 auto!important;
+    min-height:0!important;
+    height:auto!important;
+    overflow:visible!important;
+  }
+  body.logged-in .staff-wrap{
+    display:block;
+    flex:0 0 auto!important;
+    width:100%;
+    max-height:62dvh;
+    min-height:260px;
+    overflow:auto!important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    touch-action:pan-x pan-y;
+    border:1px solid #d6dce5;
+  }
+  body.logged-in #score{
+    display:block;
+    width:900px!important;
+    min-width:900px!important;
+    height:520px!important;
+    min-height:520px!important;
+    max-width:none!important;
+  }
+  body.logged-in #appMain>section:nth-of-type(4){
+    display:flex!important;
+    flex:0 0 auto!important;
+    overflow:visible!important;
+    margin-bottom:8px;
+  }
+  body.logged-in #appMain>section:nth-of-type(4) .row,
+  body.logged-in #appMain>section:nth-of-type(4) .toolbar{flex-basis:100%;min-width:0}
+  body.logged-in #appMain>section:nth-of-type(4) .toolbar{display:flex;flex-wrap:wrap}
+}
 </style></head>
 <body>
 <header id="appHeader"><div class="brand"><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></div><nav id="topTools" hidden><label class="topbtn">Carregar pauta<input id="topImage" type="file" accept="image/*" hidden></label><button id="topAnalyze" class="primary">Analisar / Converter</button><button id="topSave">Guardar</button><button id="topExport">Exportar PDF</button><button id="topExit" class="danger">Sair</button></nav></header>
