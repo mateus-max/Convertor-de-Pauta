@@ -93,3 +93,17 @@ jobs:
           projectId: convertor-de-pauta
           channelId: live
           firebaseToolsVersion: 15.4.0
+
+      - name: Deploy private Realtime Database rules
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ steps.credentials.outputs.json }}
+        run: |
+          python - <<'PY'
+          import os, json
+          path = os.path.join(os.environ["RUNNER_TEMP"], "firebase-service-account.json")
+          with open(path, "w", encoding="utf-8") as f:
+              json.dump(json.loads(os.environ["FIREBASE_SERVICE_ACCOUNT_JSON"]), f)
+          os.chmod(path, 0o600)
+          PY
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
+          npx --yes firebase-tools@15.4.0 deploy --only database --project convertor-de-pauta --non-interactive
