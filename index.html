@@ -239,4 +239,58 @@ document.querySelector('#topAnalyze').onclick=()=>document.querySelector('#analy
 document.querySelector('#topSave').onclick=()=>document.querySelector('#save').click();
 document.querySelector('#topExport').onclick=()=>document.querySelector('#pdf').click();
 document.querySelector('#topExit').onclick=()=>auth.signOut();
+
+/* Persist current workspace, editor draft and scroll position across refreshes */
+(function(){
+ const STATE_KEY='convertorPautaWorkspaceV1';
+ function capture(){
+  try{
+   const wrap=document.querySelector('.staff-wrap');
+   const state={
+    scrollY:window.scrollY||document.documentElement.scrollTop||0,
+    staffScrollTop:wrap?wrap.scrollTop:0,
+    staffScrollLeft:wrap?wrap.scrollLeft:0,
+    notes:typeof notes!=='undefined'?notes:[],
+    title:document.querySelector('#title')?.value||'Minha partitura',
+    lyrics:document.querySelector('#lyrics')?.value||'',
+    key:document.querySelector('#key')?.value||'Dó maior',
+    selected:typeof selected!=='undefined'?selected:-1,
+    loggedIn:!!(typeof currentUser!=='undefined'&&currentUser)
+   };
+   sessionStorage.setItem(STATE_KEY,JSON.stringify(state));
+  }catch(e){}
+ }
+ function restore(){
+  try{
+   const raw=sessionStorage.getItem(STATE_KEY);if(!raw)return;
+   const state=JSON.parse(raw);
+   if(Array.isArray(state.notes)&&state.notes.length&&typeof notes!=='undefined'){
+    notes=state.notes;
+    if(typeof draw==='function')draw();
+   }
+   const title=document.querySelector('#title'),lyrics=document.querySelector('#lyrics'),key=document.querySelector('#key');
+   if(title&&state.title)title.value=state.title;
+   if(lyrics)lyrics.value=state.lyrics||'';
+   if(key&&state.key)key.value=state.key;
+   requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    window.scrollTo({top:Math.max(0,state.scrollY||0),left:0,behavior:'instant'});
+    const wrap=document.querySelector('.staff-wrap');
+    if(wrap){wrap.scrollTop=state.staffScrollTop||0;wrap.scrollLeft=state.staffScrollLeft||0}
+   }));
+  }catch(e){}
+ }
+ document.addEventListener('input',capture,true);
+ document.addEventListener('change',capture,true);
+ window.addEventListener('scroll',capture,{passive:true});
+ document.addEventListener('scroll',capture,true);
+ window.addEventListener('pagehide',capture);
+ window.addEventListener('beforeunload',capture);
+ setInterval(capture,1000);
+ // Firebase restores the authenticated session asynchronously; restore after it settles.
+ if(typeof auth!=='undefined'&&auth){
+  let restored=false;
+  auth.onAuthStateChanged(()=>{if(!restored){restored=true;setTimeout(restore,120)}});
+  setTimeout(()=>{if(!restored){restored=true;restore()}},2500);
+ }else setTimeout(restore,100);
+})();
 </script></body></html>
