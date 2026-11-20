@@ -19,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-AUDIVERIS = os.environ.get("AUDIVERIS_BIN", "/usr/bin/audiveris")
+AUDIVERIS = os.environ.get("AUDIVERIS_BIN", "/usr/local/bin/audiveris")
 MAX_BYTES = 20 * 1024 * 1024
 ALLOWED = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".pdf"}
 
