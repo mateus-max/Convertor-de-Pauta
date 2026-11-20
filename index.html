@@ -229,7 +229,14 @@ body.logged-in #appMain>section:nth-of-type(3){padding:0;border:0;background:#ff
  body.logged-in .staff-wrap{overflow:visible;background:white;padding:0}
  .a4-page{width:210mm;height:297mm;box-shadow:none;page-break-after:always}
 }
-</style></head>
+
+/* Use the full area down to the bottom of the screen; scroll only inside the score workspace. */
+@media(max-width:650px){
+ body.logged-in #appMain{height:calc(100dvh - 138px)!important;min-height:0!important;display:flex;flex-direction:column;overflow:hidden!important;padding:0 4px 0!important;margin:0!important}
+ body.logged-in #appMain>section:nth-of-type(3){flex:1 1 0!important;min-height:0!important;height:100%!important;overflow:hidden!important;margin:0!important}
+ body.logged-in .staff-wrap{flex:1 1 0!important;min-height:0!important;height:100%!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;padding:8px 4px 14px!important;overscroll-behavior:contain}
+ body.logged-in .a4-page{margin-bottom:0!important}
+}</style></head>
 <body>
 <header id="appHeader"><div class="brand"><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></div><nav id="topTools" hidden><label class="topbtn">Carregar pauta<input id="topImage" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff" multiple style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer"></label><button id="topAnalyze" class="primary">Converter para edição</button><button id="addNote">＋ Nota</button><button id="removeNote" class="danger">Apagar nota</button><button id="editLyric">Editar letra</button><button id="deleteLyric" class="danger">Apagar letra</button><button id="undo">Desfazer</button><button id="play">Reproduzir</button><button id="stop">Parar</button><button id="topSave">Guardar</button><button id="load">Abrir</button><button id="midi">MIDI</button><button id="topExport">PDF</button><button id="wav">WAV</button><button id="topExit" class="danger">Sair</button></nav></header>
 <main id="appMain">
@@ -264,7 +271,7 @@ document.querySelector('#addNote').onclick=()=>{if(!loadedPages.length)return;sn
 document.querySelector('#removeNote').onclick=()=>{if(selected<0)return;snapshot();notes.splice(selected,1);selected=-1;draw()};
 document.querySelector('#undo').onclick=()=>{if(history.length){notes=JSON.parse(history.pop());selected=-1;draw()}};
 document.querySelector('#editLyric').onclick=()=>{if(selectedText<0||!textItems[selectedText]){document.querySelector('#analysisStatus').textContent='Toque numa palavra reconhecida para a seleccionar.';return}const t=textItems[selectedText],v=prompt('Substituir letra:',t.text);if(v!==null){t.text=v;draw()}};
-document.querySelector('#deleteLyric').onclick=()=>{if(selectedText<0||!textItems[selectedText]){document.querySelector('#analysisStatus').textContent='Seleccione uma palavra da letra.';return}textItems.splice(selectedText,1);selectedText=-1;draw()};
+document.querySelector('#deleteLyric').textContent='Apagar todas as letras';document.querySelector('#deleteLyric').onclick=()=>{if(!textItems.length){document.querySelector('#lyrics').value='';document.querySelector('#analysisStatus').textContent='Não há letras reconhecidas para apagar.';return}textItems.forEach(t=>{t.text=''});document.querySelector('#lyrics').value='';selectedText=-1;draw();document.querySelector('#analysisStatus').textContent='Todas as letras reconhecidas foram apagadas. A pauta e as notas permanecem.'};
 function showUploadedFiles(fileList){
  const files=Array.from(fileList||[]);
  const status=document.querySelector('#analysisStatus');
