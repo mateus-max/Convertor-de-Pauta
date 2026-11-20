@@ -13,6 +13,7 @@
 <body>
 <header><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></header>
 <main>
+<section class="card" id="accountCard"><h2>Conta privada</h2><p class="hint">Crie uma conta ou entre para manter as suas partituras privadas.</p><div class="grid"><input id="authEmail" type="email" autocomplete="email" placeholder="O seu e-mail"><input id="authPassword" type="password" autocomplete="current-password" placeholder="Palavra-passe (mínimo 6 caracteres)"></div><div class="row" style="margin-top:10px"><button id="signIn" class="primary">Entrar</button><button id="signUp">Criar conta</button><button id="signOut" class="danger" hidden>Sair</button></div><div id="authStatus" class="status" aria-live="polite">Entre ou crie a sua conta para guardar partituras privadas.</div></section>
 <section class="card"><h2>1. Importar partitura</h2><p class="hint">Carregue uma fotografia ou imagem (JPG, PNG ou WEBP). A análise é feita no próprio dispositivo; a imagem não é enviada para armazenamento na nuvem.</p>
 <div class="row"><label class="file primary">📷 Escolher imagem<input id="imageFile" type="file" accept="image/*"></label><button id="analyze" class="btn">✨ Analisar pauta</button></div><img id="preview" alt="Pré-visualização da partitura"><div id="analysisStatus" class="status">Aguardando uma imagem.</div>
 </section>
