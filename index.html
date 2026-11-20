@@ -198,20 +198,49 @@ body.logged-in #appMain{background:#fff!important}
  body.logged-in #appMain>section:nth-of-type(3),
  body.logged-in #appMain>section:nth-of-type(4){background:#fff!important}
 }
+
+/* A4 editor workspace and top-only command ribbon */
+:root{--paper:#fff}
+#topTools{max-width:100%;overflow-x:auto;flex-wrap:nowrap;justify-content:flex-start;scrollbar-width:thin}
+#topTools>*{flex:0 0 auto}
+body.logged-in #appMain{height:calc(100dvh - 64px);overflow:hidden}
+body.logged-in #appMain>section:nth-of-type(2){display:none!important}
+body.logged-in #appMain>section:nth-of-type(3){display:flex;flex:1 1 auto;min-height:0;overflow:hidden}
+body.logged-in #appMain>section:nth-of-type(4){display:none!important}
+body.logged-in #appMain>section:nth-of-type(3) h2{display:none}
+body.logged-in #appMain>section:nth-of-type(3) .grid{display:none!important}
+body.logged-in .staff-wrap{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;background:#eef1f5;padding:14px;display:flex;flex-direction:column;align-items:center;gap:18px}
+.a4-page{width:min(100%,794px);aspect-ratio:794/1123;background:#fff;box-shadow:0 2px 12px #0002;position:relative;flex:0 0 auto;overflow:hidden}
+#a4Pages #score{width:100%;height:100%;min-width:0;display:block;touch-action:pan-y}
+#a4Pages svg image{pointer-events:none}
+body.logged-in #analysisStatus{display:none!important}
+body.logged-in #appMain>section:nth-of-type(3){padding:0;border:0;background:#fff}
+@media(max-width:650px){
+ #appHeader{position:sticky;top:0;z-index:30;flex-direction:column;align-items:stretch}
+ #topTools{width:100%;overflow-x:auto;justify-content:flex-start;flex-wrap:nowrap}
+ body.logged-in #appMain{height:calc(100dvh - 105px);padding:4px}
+ body.logged-in .staff-wrap{padding:8px}
+ .a4-page{width:100%;min-width:100%}
+}
+@media print{
+ #appHeader,.no-print{display:none!important}
+ body.logged-in #appMain{height:auto;overflow:visible}
+ body.logged-in #appMain>section:nth-of-type(3){display:block!important}
+ body.logged-in .staff-wrap{overflow:visible;background:white;padding:0}
+ .a4-page{width:210mm;height:297mm;box-shadow:none;page-break-after:always}
+}
 </style></head>
 <body>
-<header id="appHeader"><div class="brand"><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></div><nav id="topTools" hidden><label class="topbtn">Carregar pauta<input id="topImage" type="file" accept="image/*" hidden></label><button id="topAnalyze" class="primary">Analisar / Converter</button><button id="topSave">Guardar</button><button id="topExport">Exportar PDF</button><button id="topExit" class="danger">Sair</button></nav></header>
+<header id="appHeader"><div class="brand"><h1>🎼 Convertor de Pauta</h1><small>Reconhecimento, edição e reprodução musical</small></div><nav id="topTools" hidden><label class="topbtn">Carregar pauta<input id="topImage" type="file" accept="image/*" multiple hidden></label><button id="topAnalyze" class="primary">Converter para edição</button><button id="addNote">＋ Nota</button><button id="removeNote" class="danger">Apagar nota</button><button id="undo">Desfazer</button><button id="play">Reproduzir</button><button id="stop">Parar</button><button id="topSave">Guardar</button><button id="load">Abrir</button><button id="midi">MIDI</button><button id="topExport">PDF</button><button id="wav">WAV</button><button id="topExit" class="danger">Sair</button></nav></header>
 <main id="appMain">
 <section class="card" id="accountCard"><h2>Conta privada</h2><p class="hint">Crie uma conta ou entre para manter as suas partituras privadas.</p><div class="grid"><input id="authEmail" type="email" autocomplete="email" placeholder="O seu e-mail"><input id="authPassword" type="password" autocomplete="current-password" placeholder="Palavra-passe (mínimo 6 caracteres)"></div><div class="row" style="margin-top:10px"><button id="signIn" class="primary">Entrar</button><button id="signUp">Criar conta</button><button id="signOut" class="danger" hidden>Sair</button></div><div id="authStatus" class="status" aria-live="polite">Entre ou crie a sua conta para guardar partituras privadas.</div></section>
 <section class="card"><h2>1. Importar partitura</h2><p class="hint">Carregue uma fotografia ou imagem (JPG, PNG ou WEBP). A análise é feita no próprio dispositivo; a imagem não é enviada para armazenamento na nuvem.</p>
-<div class="row"><label class="file primary">📷 Escolher imagem<input id="imageFile" type="file" accept="image/*"></label><button id="analyze" class="btn">✨ Analisar pauta</button></div><img id="preview" alt="Pré-visualização da partitura"><div id="analysisStatus" class="status">Aguardando uma imagem.</div>
+<div class="row"><label class="file primary">📷 Escolher imagem<input id="imageFile" type="file" accept="image/*" multiple></label><button id="analyze" class="btn">✨ Converter para edição</button></div><img id="preview" alt="Pré-visualização da partitura"><div id="analysisStatus" class="status">Aguardando uma imagem.</div>
 </section>
-<section class="card"><h2>2. Editor de partitura</h2><div class="toolbar no-print">
-<button id="addNote">＋ Nota</button><button id="removeNote" class="danger">Apagar selecionada</button><button id="undo">↶ Desfazer</button><button id="play" class="primary">▶ Reproduzir</button><button id="stop">■ Parar</button>
-</div><div class="staff-wrap"><svg id="score" viewBox="0 0 900 300" role="img" aria-label="Pauta musical editável"></svg></div>
+<section class="card"><h2>Editor A4</h2><div class="staff-wrap" id="a4Pages"><div class="a4-page"><svg id="score" viewBox="0 0 794 1123" role="img" aria-label="Partitura A4 editável"></svg></div></div>
 <div class="grid" style="margin-top:12px"><div><label class="hint">Letra / texto da canção</label><textarea id="lyrics" rows="3" style="width:100%" placeholder="Escreva a letra da canção..."></textarea></div><div><label class="hint">Título da partitura</label><input id="title" type="text" value="Minha partitura"><label class="hint">Tonalidade</label><select id="key"><option>Dó maior</option><option>Sol maior</option><option>Ré maior</option><option>Fá maior</option><option>Lá menor</option></select><p class="hint">Toque numa nota para a selecionar. Use “＋ Nota” para inserir e arraste uma nota para mudar a sua posição.</p></div></div>
 </section>
-<section class="card"><h2>3. Guardar e exportar</h2><div class="row"><button id="save" class="primary">☁ Guardar no Realtime Database</button><button id="load">Abrir guardada</button></div><div class="toolbar"><button id="midi">Descarregar MIDI</button><button id="pdf">Exportar PDF</button><button id="wav">Descarregar WAV</button></div><div id="dbStatus" class="status">A ligação ao Firebase será verificada ao guardar.</div><p class="hint">O Realtime Database guarda apenas os dados estruturados da pauta e as letras. Não é utilizado Firebase Storage, Firestore nem Cloud Functions. Para guardar na nuvem, as regras do Realtime Database precisam autorizar leitura e escrita.</p></section>
+<section class="card" id="storageCard"><div id="dbStatus" class="status">A ligação ao Firebase será verificada ao guardar.</div><p class="hint">O Realtime Database guarda apenas os dados estruturados da pauta e as letras. Não é utilizado Firebase Storage, Firestore nem Cloud Functions. Para guardar na nuvem, as regras do Realtime Database precisam autorizar leitura e escrita.</p></section>
 </main>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script>
@@ -223,15 +252,15 @@ document.querySelector('#signUp').onclick=async()=>{try{const email=document.que
 document.querySelector('#signIn').onclick=async()=>{try{await auth.signInWithEmailAndPassword(document.querySelector('#authEmail').value.trim(),document.querySelector('#authPassword').value);authStatus.textContent='Sessão iniciada.'}catch(e){authStatus.textContent=authError(e)}};
 document.querySelector('#signOut').onclick=()=>auth.signOut();
 function authError(e){const map={'auth/email-already-in-use':'Este e-mail já tem uma conta. Entre.','auth/invalid-email':'O e-mail não é válido.','auth/weak-password':'A palavra-passe deve ter pelo menos 6 caracteres.','auth/user-not-found':'Conta não encontrada. Crie uma conta.','auth/wrong-password':'Palavra-passe incorrecta.','auth/invalid-credential':'E-mail ou palavra-passe incorrectos.','auth/operation-not-allowed':'Active o método E-mail/palavra-passe em Firebase Authentication → Sign-in method.'};return map[e.code]||e.message||'Ocorreu um erro de autenticação.'}
-const svg=document.querySelector('#score');let notes=[],selected=-1,history=[],drag=-1;
-function draw(){svg.innerHTML='';if(!notes.length)return;for(let i=0;i<5;i++){let l=document.createElementNS('http://www.w3.org/2000/svg','line');l.setAttribute('x1',35);l.setAttribute('x2',870);l.setAttribute('y1',110+i*20);l.setAttribute('y2',110+i*20);l.setAttribute('stroke','#111');l.setAttribute('stroke-width',1.5);svg.append(l)}let clef=document.createElementNS(svg.namespaceURI,'text');clef.textContent='𝄞';clef.setAttribute('x',48);clef.setAttribute('y',185);clef.setAttribute('font-size',76);clef.setAttribute('fill','#111');svg.append(clef);
+const svg=document.querySelector('#score');let notes=[],selected=-1,history=[],drag=-1,sourceImage=null,sourceWidth=794,sourceHeight=1123,loadedPages=[];
+function draw(){svg.innerHTML='';if(sourceImage){const bg=document.createElementNS(svg.namespaceURI,'image');bg.setAttribute('href',sourceImage);bg.setAttribute('x',0);bg.setAttribute('y',0);bg.setAttribute('width',794);bg.setAttribute('height',1123);bg.setAttribute('preserveAspectRatio','xMidYMid meet');svg.append(bg)}if(!notes.length)return;for(let i=0;i<5;i++){let l=document.createElementNS('http://www.w3.org/2000/svg','line');l.setAttribute('x1',35);l.setAttribute('x2',870);l.setAttribute('y1',110+i*20);l.setAttribute('y2',110+i*20);l.setAttribute('stroke','#111');l.setAttribute('stroke-width',1.5);svg.append(l)}let clef=document.createElementNS(svg.namespaceURI,'text');clef.textContent='𝄞';clef.setAttribute('x',82);clef.setAttribute('y',470);clef.setAttribute('font-size',76);clef.setAttribute('fill','#111');svg.append(clef);
 notes.forEach((n,i)=>{let g=document.createElementNS(svg.namespaceURI,'g');g.setAttribute('class','note');g.dataset.i=i;let stem=document.createElementNS(svg.namespaceURI,'line');stem.setAttribute('x1',n.x+8);stem.setAttribute('x2',n.x+8);stem.setAttribute('y1',n.y);stem.setAttribute('y2',n.y-48);stem.setAttribute('stroke','#111');stem.setAttribute('stroke-width',2);let el=document.createElementNS(svg.namespaceURI,'ellipse');el.setAttribute('cx',n.x);el.setAttribute('cy',n.y);el.setAttribute('rx',10);el.setAttribute('ry',7);el.setAttribute('transform','rotate(-20 '+n.x+' '+n.y+')');el.setAttribute('fill',i===selected?'#e39b24':'#111');g.append(stem,el);g.addEventListener('pointerdown',e=>{selected=i;drag=i;g.setPointerCapture(e.pointerId);draw()});g.addEventListener('pointermove',e=>{if(drag!==i)return;let p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;let q=p.matrixTransform(svg.getScreenCTM().inverse());notes[i].x=Math.max(80,Math.min(850,q.x));notes[i].y=Math.max(60,Math.min(250,190-Math.round((190-q.y)/10)*10));notes[i].pitch=midiForStaffStep(Math.round((190-notes[i].y)/10));draw()});g.addEventListener('pointerup',()=>{drag=-1});svg.append(g)});}
 draw();
 function snapshot(){history.push(JSON.stringify(notes));if(history.length>30)history.shift()}
-document.querySelector('#addNote').onclick=()=>{snapshot();notes.push({x:120+notes.length*45,y:170,pitch:64,dur:1});selected=notes.length-1;draw()};
+document.querySelector('#addNote').onclick=()=>{if(!loadedPages.length)return;snapshot();notes.push({x:397,y:560,pitch:64,dur:1});selected=notes.length-1;draw()};
 document.querySelector('#removeNote').onclick=()=>{if(selected<0)return;snapshot();notes.splice(selected,1);selected=-1;draw()};
 document.querySelector('#undo').onclick=()=>{if(history.length){notes=JSON.parse(history.pop());selected=-1;draw()}};
-document.querySelector('#imageFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let u=URL.createObjectURL(f);let im=document.querySelector('#preview');im.src=u;im.style.display='block';document.querySelector('#analysisStatus').textContent='Imagem carregada: '+f.name+'. Toque em “Analisar pauta”.'};
+document.querySelector('#imageFile').onchange=e=>{const files=[...e.target.files];if(!files.length)return;loadedPages=files.map(file=>({file,url:URL.createObjectURL(file)}));const first=new Image();first.onload=()=>{sourceImage=first.src;sourceWidth=first.naturalWidth;sourceHeight=first.naturalHeight;notes=[];selected=-1;const host=document.querySelector('#a4Pages');host.innerHTML='';loadedPages.forEach((p,i)=>{const page=document.createElement('div');page.className='a4-page';const img=document.createElement('img');img.src=p.url;img.alt='Página '+(i+1);img.style.cssText='width:100%;height:100%;object-fit:contain;display:block';page.append(img);host.append(page)});const firstPage=host.firstElementChild;const overlay=document.createElementNS('http://www.w3.org/2000/svg','svg');overlay.id='score';overlay.setAttribute('viewBox','0 0 794 1123');overlay.style.cssText='position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y';firstPage.append(overlay);window.scoreOverlay=overlay;document.querySelector('#analysisStatus').textContent=files.length+' página(s) carregada(s) em formato A4. Clique em Converter para edição.'};first.src=loadedPages[0].url;};
 
 // OMR melhorado: detecção de vários sistemas, remoção morfológica das linhas,
 // componentes candidatos a cabeças de notas, quantização diatónica e OCR assistido.
@@ -255,13 +284,13 @@ function midiForStaffStep(step){
  const ix=Math.max(0,Math.min(scale.length-1,step));return scale[ix];
 }
 async function runOMR(){
- const im=document.querySelector('#preview');if(!im.src){alert('Escolha primeiro uma imagem.');return}
+ const im=document.querySelector('#preview');if(!loadedPages.length){alert('Carregue primeiro uma imagem de partitura.');return}const workImage=new Image();workImage.src=loadedPages[0].url;await new Promise((resolve,reject)=>{workImage.onload=resolve;workImage.onerror=reject});
  const status=document.querySelector('#analysisStatus'),btn=document.querySelector('#analyze');btn.disabled=true;
  let mats=[];
  try{
   status.textContent='A preparar o reconhecimento musical...';await waitForOpenCV();
-  const maxW=2000,scale=Math.min(1,maxW/im.naturalWidth),w=Math.max(1,Math.round(im.naturalWidth*scale)),h=Math.max(1,Math.round(im.naturalHeight*scale));
-  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(im,0,0,w,h);
+  const maxW=2000,scale=Math.min(1,maxW/workImage.naturalWidth),w=Math.max(1,Math.round(workImage.naturalWidth*scale)),h=Math.max(1,Math.round(workImage.naturalHeight*scale));
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(workImage,0,0,w,h);
   const src=cv.imread(canvas);mats.push(src);
   const gray=new cv.Mat(),binary=new cv.Mat(),horizontal=new cv.Mat(),vertical=new cv.Mat(),withoutLines=new cv.Mat(),joined=new cv.Mat();
   mats.push(gray,binary,horizontal,vertical,withoutLines,joined);
@@ -307,7 +336,7 @@ async function runOMR(){
   snapshot();
   notes=ordered.map((n,i)=>{
     const st=staffs[n.staff],pitch=midiForStaffStep(n.step);
-    return{x:Math.max(80,Math.min(850,80+n.x/w*760)),y:Math.max(65,Math.min(245,110+(n.y-st.top)/(st.bottom-st.top)*80)),pitch,dur:1,omrConfidence:Math.round(Math.min(.95,.42+n.compact*.45)*100)};
+    return{x:70+n.x/w*654,y:400+(n.y-st.top)/(st.bottom-st.top)*72,pitch,dur:1,omrConfidence:Math.round(Math.min(.95,.42+n.compact*.45)*100)};
   });
   selected=-1;draw();
   status.textContent='Análise concluída: '+staffs.length+' sistema(s), '+notes.length+' possíveis cabeças de notas. As posições foram quantizadas para linhas e espaços. Confirme cada nota: a versão actual ainda não determina com segurança figuras rítmicas, acidentes, armaduras, ligaduras, vozes simultâneas ou instrumentos.';
@@ -328,10 +357,10 @@ let ctx=null,osc=[];document.querySelector('#play').onclick=()=>{document.queryS
 document.querySelector('#stop').onclick=()=>{osc.forEach(o=>{try{o.stop()}catch(e){}});osc=[]};
 document.querySelector('#wav').onclick=()=>{let rate=44100,duration=Math.max(1,notes.length*.5),buf=new ArrayBuffer(44+rate*duration*2),v=new DataView(buf);function str(o,s){for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))}str(0,'RIFF');v.setUint32(4,36+rate*duration*2,true);str(8,'WAVE');str(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);str(36,'data');v.setUint32(40,rate*duration*2,true);let pos=44;notes.forEach((n,i)=>{let f=440*Math.pow(2,(n.pitch-69)/12);for(let j=0;j<rate*.5;j++){let env=Math.min(1,j/500,(rate*.5-j)/3000);v.setInt16(pos,Math.max(-1,Math.min(1,Math.sin(2*Math.PI*f*j/rate)*.25*env))*32767,true);pos+=2}});download(new Blob([buf],{type:'audio/wav'}),'partitura.wav')};
 
-document.querySelector('#topImage').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const dt=new DataTransfer();dt.items.add(file);document.querySelector('#imageFile').files=dt.files;document.querySelector('#imageFile').dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('#analysisStatus').textContent='Imagem carregada. Toque em Analisar / Converter.'});
+document.querySelector('#topImage').addEventListener('change',e=>{const dt=new DataTransfer();[...e.target.files].forEach(file=>dt.items.add(file));const input=document.querySelector('#imageFile');input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));});
 document.querySelector('#topAnalyze').onclick=()=>document.querySelector('#analyze').click();
 document.querySelector('#topSave').onclick=()=>document.querySelector('#save').click();
-document.querySelector('#topExport').onclick=()=>document.querySelector('#pdf').click();
+document.querySelector('#topExport').onclick=()=>window.print();
 document.querySelector('#topExit').onclick=()=>auth.signOut();
 
 /* Persist current workspace, editor draft and scroll position across refreshes */
