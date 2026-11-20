@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 RUN mkdir -p /tmp/audiveris /opt/audiveris \
  && curl -fL "https://github.com/Audiveris/audiveris/releases/download/5.11.0/Audiveris-5.11.0-ubuntu24.04-x86_64.deb" -o /tmp/audiveris/audiveris.deb \
  && apt-get update && apt-get install -y /tmp/audiveris/audiveris.deb \
- && rm -rf /var/lib/apt/lists/* /tmp/audiveris
+ && launcher=$(find /opt /usr -type f \( -name 'Audiveris' -o -name 'audiveris' \) -perm -111 -print -quit) && test -n "$launcher" && ln -sf "$launcher" /usr/local/bin/audiveris && rm -rf /var/lib/apt/lists/* /tmp/audiveris
 
 WORKDIR /app
 COPY requirements.txt .
