@@ -37,53 +37,88 @@ document.querySelector('#removeNote').onclick=()=>{if(selected<0)return;snapshot
 document.querySelector('#undo').onclick=()=>{if(history.length){notes=JSON.parse(history.pop());selected=-1;draw()}};
 document.querySelector('#imageFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let u=URL.createObjectURL(f);let im=document.querySelector('#preview');im.src=u;im.style.display='block';document.querySelector('#analysisStatus').textContent='Imagem carregada: '+f.name+'. Toque em “Analisar pauta”.'};
 
-// OMR inicial no navegador: detecção geométrica das cinco linhas, cabeças de notas
-// por componentes conectados após remoção das linhas e OCR para texto/lyrics.
-function waitForOpenCV(){return new Promise((resolve,reject)=>{let started=Date.now();(function check(){if(window.cv&&cv.Mat){if(cv.getBuildInformation)resolve();else cv.onRuntimeInitialized=()=>resolve();return}if(Date.now()-started>45000){reject(Error('OpenCV.js não carregou. Verifique a ligação à Internet e tente novamente.'));return}setTimeout(check,250)})()})}
-function matToCanvas(mat){let canvas=document.createElement('canvas');canvas.width=mat.cols;canvas.height=mat.rows;let imageData=new ImageData(new Uint8ClampedArray(mat.data),mat.cols,mat.rows);canvas.getContext('2d').putImageData(imageData,0,0);return canvas}
+// OMR melhorado: detecção de vários sistemas, remoção morfológica das linhas,
+// componentes candidatos a cabeças de notas, quantização diatónica e OCR assistido.
+function waitForOpenCV(){return new Promise((resolve,reject)=>{let started=Date.now();(function check(){if(window.cv&&cv.Mat){if(cv.getBuildInformation)resolve();else cv.onRuntimeInitialized=()=>resolve();return}if(Date.now()-started>60000){reject(Error('OpenCV.js demorou demasiado a carregar. Verifique a Internet e tente novamente.'));return}setTimeout(check,250)})()})}
+function releaseMats(list){list.forEach(m=>{if(m&&m.delete)try{m.delete()}catch(e){}})}
+function detectStaffs(horiz,w,h){
+ const row=[];for(let y=0;y<h;y++){let n=0;for(let x=0;x<w;x++)if(horiz.ucharPtr(y,x)[0])n++;if(n>=w*.16)row.push(y)}
+ const peaks=[];for(const y of row){if(!peaks.length||y-peaks[peaks.length-1].last>2)peaks.push({first:y,last:y,sum:y,count:1});else{let p=peaks[peaks.length-1];p.last=y;p.sum+=y;p.count++}}
+ const ys=peaks.map(p=>Math.round(p.sum/p.count)),systems=[];
+ // Search each possible five-line sequence with consistent line spacing.
+ for(let i=0;i<ys.length-4;i++){
+   const a=ys.slice(i,i+5),gaps=a.slice(1).map((v,j)=>v-a[j]),avg=gaps.reduce((s,v)=>s+v,0)/4;
+   if(avg<3||gaps.some(g=>Math.abs(g-avg)>Math.max(2,avg*.28)))continue;
+   if(systems.some(s=>Math.abs(s.lines[0]-a[0])<avg*.8))continue;
+   systems.push({lines:a,spacing:avg,top:a[0],bottom:a[4]});
+ }
+ return systems.filter((s,i)=>!systems.some((t,j)=>j!==i&&Math.abs(t.top-s.top)<s.spacing*.8&&t.spacing>s.spacing*1.25));
+}
+function midiForStaffStep(step){
+ const scale=[64,65,67,69,71,72,74,76,77,79,81,83,84,86,88,89,91,93,95,96,98,100,101,103,105,107,108];
+ const ix=Math.max(0,Math.min(scale.length-1,step+7));return scale[ix];
+}
 async function runOMR(){
  const im=document.querySelector('#preview');if(!im.src){alert('Escolha primeiro uma imagem.');return}
  const status=document.querySelector('#analysisStatus'),btn=document.querySelector('#analyze');btn.disabled=true;
- let src,gray,binary,horiz,vert,clean,labels,stats,centroids,kernel;
+ let mats=[];
  try{
- status.textContent='A preparar o motor de reconhecimento...';await waitForOpenCV();
- const maxW=1800,scale=Math.min(1,maxW/im.naturalWidth),w=Math.round(im.naturalWidth*scale),h=Math.round(im.naturalHeight*scale);
- const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(im,0,0,w,h);
- src=cv.imread(canvas);gray=new cv.Mat();binary=new cv.Mat();horiz=new cv.Mat();vert=new cv.Mat();clean=new cv.Mat();
- cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);cv.GaussianBlur(gray,gray,new cv.Size(3,3),0);
- cv.adaptiveThreshold(gray,binary,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY_INV,31,12);
- let hk=Math.max(20,Math.floor(w/30));kernel=cv.getStructuringElement(cv.MORPH_RECT,new cv.Size(hk,1));
- cv.morphologyEx(binary,horiz,cv.MORPH_OPEN,kernel);kernel.delete();
- let vk=Math.max(15,Math.floor(h/35));kernel=cv.getStructuringElement(cv.MORPH_RECT,new cv.Size(1,vk));cv.morphologyEx(binary,vert,cv.MORPH_OPEN,kernel);kernel.delete();
- cv.subtract(binary,horiz,clean);cv.subtract(clean,vert,clean);
- // detect horizontal staff-line y coordinates by row pixel density
- let rowScores=[];for(let y=0;y<h;y++){let n=0;for(let x=0;x<w;x++)if(horiz.ucharPtr(y,x)[0]>0)n++;if(n>w*.22)rowScores.push(y)}
- let lines=[];rowScores.forEach(y=>{if(!lines.length||y-lines[lines.length-1]>2)lines.push(y);else lines[lines.length-1]=Math.round((lines[lines.length-1]+y)/2)});
- let groups=[];for(let i=0;i<lines.length;){let g=[lines[i]];let j=i+1;while(j<lines.length&&lines[j]-lines[j-1]<h*.035){g.push(lines[j]);j++}if(g.length>=5)groups.push(g);i=j}
- if(!groups.length)throw Error('Não consegui identificar cinco linhas de pauta. Tente uma imagem mais nítida, direita e com a pauta inteira visível.');
- let staff=groups.sort((a,b)=>b.length-a.length)[0].slice(0,5),spacing=staff.slice(1).reduce((s,y,i)=>s+y-staff[i],0)/4,top=staff[0],bottom=staff[4];
- // connected components after suppressing staff lines
- labels=new cv.Mat();stats=new cv.Mat();centroids=new cv.Mat();let count=cv.connectedComponentsWithStats(clean,labels,stats,centroids,8,cv.CV_32S);
- let found=[];for(let i=1;i<count;i++){let x=stats.intAt(i,cv.CC_STAT_LEFT),y=stats.intAt(i,cv.CC_STAT_TOP),cw=stats.intAt(i,cv.CC_STAT_WIDTH),ch=stats.intAt(i,cv.CC_STAT_HEIGHT),area=stats.intAt(i,cv.CC_STAT_AREA);
- if(area<Math.max(8,spacing*spacing*.10)||area>spacing*spacing*5||cw<spacing*.22||cw>spacing*2.2||ch<spacing*.18||ch>spacing*1.8)continue;
- let cx=centroids.doubleAt(i,0),cy=centroids.doubleAt(i,1);
- if(cy<top-spacing*1.2||cy>bottom+spacing*1.5)continue;
- // Ignore narrow stems and lyric-like components; keep compact notehead candidates.
- let ratio=cw/ch;if(ratio<.55||ratio>2.1)continue;
- let step=Math.round((bottom-cy)/(spacing/2));let diatonic=[64,65,67,69,71,72,74,76,77,79,81,83,84,86,88,89,91,93,95,96,98,100,101,103,105,107,108];
- let pitch=diatonic[Math.max(0,Math.min(diatonic.length-1,step))];
- found.push({x:cx,y:cy,pitch,dur:1,confidence:Math.min(.99,.5+area/(spacing*spacing*3))});
- }
- found.sort((a,b)=>a.x-b.x);
- // merge nearby duplicate components
- found=found.filter((n,i,a)=>i===0||Math.abs(n.x-a[i-1].x)>spacing*.45||Math.abs(n.y-a[i-1].y)>spacing*.4);
- if(!found.length)throw Error('As pautas foram detectadas, mas não encontrei cabeças de notas suficientemente claras. Experimente uma imagem com maior resolução e bom contraste.');
- snapshot();notes=found.map(n=>({x:Math.max(80,Math.min(850,80+n.x/w*760)),y:Math.max(65,Math.min(245,110+(n.y-top)/(bottom-top)*80)),pitch:n.pitch,dur:1}));selected=-1;draw();
- status.textContent='Pauta detectada. '+found.length+' possíveis notas identificadas. As alturas são estimativas em clave de Sol; confirme e corrija as notas no editor. A leitura de ritmos, acidentes, polifonia e letras impressas ainda pode conter erros.';
- // OCR text; don't overwrite user lyrics when no text is found
- try{status.textContent+=' A reconhecer letras...';let result=await Tesseract.recognize(canvas,'por+eng');let textFound=(result.data.text||'').trim();if(textFound){document.querySelector('#lyrics').value=textFound;status.textContent+=' Texto OCR encontrado; reveja a transcrição.'}else status.textContent+=' Não foi encontrado texto legível.'}catch(ocrErr){status.textContent+=' OCR de letras indisponível nesta tentativa.'}
- }catch(e){status.textContent='Falha na análise: '+e.message}
- finally{[src,gray,binary,horiz,vert,clean,labels,stats,centroids,kernel].forEach(m=>{if(m&&m.delete)try{m.delete()}catch(e){}});btn.disabled=false}
+  status.textContent='A preparar o reconhecimento musical...';await waitForOpenCV();
+  const maxW=2000,scale=Math.min(1,maxW/im.naturalWidth),w=Math.max(1,Math.round(im.naturalWidth*scale)),h=Math.max(1,Math.round(im.naturalHeight*scale));
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(im,0,0,w,h);
+  const src=cv.imread(canvas);mats.push(src);
+  const gray=new cv.Mat(),binary=new cv.Mat(),horizontal=new cv.Mat(),vertical=new cv.Mat(),withoutLines=new cv.Mat(),joined=new cv.Mat();
+  mats.push(gray,binary,horizontal,vertical,withoutLines,joined);
+  cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);cv.GaussianBlur(gray,gray,new cv.Size(3,3),0);
+  const block=Math.max(25,Math.min(51,(Math.floor(Math.min(w,h)/30)|1)));
+  cv.adaptiveThreshold(gray,binary,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY_INV,block,11);
+  // Long horizontal and vertical morphology detects staff lines and barlines.
+  const hlen=Math.max(24,Math.floor(w*.12)),hk=cv.getStructuringElement(cv.MORPH_RECT,new cv.Size(hlen,1));mats.push(hk);
+  cv.morphologyEx(binary,horizontal,cv.MORPH_OPEN,hk);
+  const vlen=Math.max(15,Math.floor(h*.045)),vk=cv.getStructuringElement(cv.MORPH_RECT,new cv.Size(1,vlen));mats.push(vk);
+  cv.morphologyEx(binary,vertical,cv.MORPH_OPEN,vk);
+  cv.subtract(binary,horizontal,withoutLines);
+  // Reconnect small fragments caused by staff-line subtraction.
+  const ek=cv.getStructuringElement(cv.MORPH_ELLIPSE,new cv.Size(3,3));mats.push(ek);
+  cv.morphologyEx(withoutLines,joined,cv.MORPH_CLOSE,ek);
+  const staffs=detectStaffs(horizontal,w,h);
+  if(!staffs.length)throw Error('Não identifiquei um sistema completo de cinco linhas. Fotografe a pauta de frente, com bom contraste e sem cortar as margens.');
+  status.textContent='Detectados '+staffs.length+' sistema(s) de pauta. A identificar símbolos...';
+  const labels=new cv.Mat(),stats=new cv.Mat(),centroids=new cv.Mat();mats.push(labels,stats,centroids);
+  const count=cv.connectedComponentsWithStats(joined,labels,stats,centroids,8,cv.CV_32S);
+  const candidates=[];
+  for(let k=0;k<staffs.length;k++){
+    const st=staffs[k],sp=st.spacing,top=st.top,bottom=st.bottom;
+    for(let i=1;i<count;i++){
+      const x=stats.intAt(i,cv.CC_STAT_LEFT),y=stats.intAt(i,cv.CC_STAT_TOP),cw=stats.intAt(i,cv.CC_STAT_WIDTH),ch=stats.intAt(i,cv.CC_STAT_HEIGHT),area=stats.intAt(i,cv.CC_STAT_AREA);
+      if(cw<sp*.32||cw>sp*1.9||ch<sp*.28||ch>sp*1.65||area<sp*sp*.12||area>sp*sp*2.8)continue;
+      const cx=centroids.doubleAt(i,0),cy=centroids.doubleAt(i,1);
+      if(cy<top-sp*.65||cy>bottom+sp*.65)continue;
+      const compact=area/(cw*ch);if(compact<.28)continue;
+      // Ignore candidates far from a legal note position (line or space).
+      const step=Math.round((bottom-cy)/(sp/2));
+      const snappedY=bottom-step*sp/2;
+      if(Math.abs(cy-snappedY)>sp*.24)continue;
+      candidates.push({x:cx,y:snappedY,step,staff:k,spacing:sp,compact,area});
+    }
+  }
+  candidates.sort((a,b)=>a.staff-b.staff||a.x-b.x);
+  // Suppress duplicate blobs around the same notehead.
+  const found=[];for(const n of candidates){const prev=found.find(p=>p.staff===n.staff&&Math.abs(p.x-n.x)<n.spacing*.55&&Math.abs(p.y-n.y)<n.spacing*.45);if(!prev)found.push(n);else if(n.compact>prev.compact)Object.assign(prev,n)}
+  if(!found.length)throw Error('As pautas foram encontradas, mas os símbolos não ficaram suficientemente separados para identificar notas. Tente uma imagem mais nítida e com maior contraste.');
+  // One editable treble-clef staff is produced; note pitches are estimated from each system's staff geometry.
+  const ordered=found.sort((a,b)=>a.x-b.x);
+  snapshot();
+  notes=ordered.map((n,i)=>{
+    const st=staffs[n.staff],pitch=midiForStaffStep(n.step);
+    return{x:Math.max(80,Math.min(850,80+n.x/w*760)),y:Math.max(65,Math.min(245,110+(n.y-st.top)/(st.bottom-st.top)*80)),pitch,dur:1,omrConfidence:Math.round(Math.min(.95,.42+n.compact*.45)*100)};
+  });
+  selected=-1;draw();
+  status.textContent='Análise concluída: '+staffs.length+' sistema(s), '+notes.length+' possíveis cabeças de notas. As posições foram quantizadas para linhas e espaços. Confirme cada nota: a versão actual ainda não determina com segurança figuras rítmicas, acidentes, armaduras, ligaduras, vozes simultâneas ou instrumentos.';
+  // OCR is optional and only fills the lyrics field when it returns useful text.
+  if(window.Tesseract){try{status.textContent+=' A reconhecer texto...';const result=await Tesseract.recognize(canvas,'por+eng',{logger:m=>{if(m.status==='recognizing text')status.textContent='OCR: '+Math.round((m.progress||0)*100)+'%'}});const txt=(result.data.text||'').trim();if(txt){document.querySelector('#lyrics').value=txt;status.textContent+=' Texto reconhecido; reveja possíveis erros.'}else status.textContent+=' Não foi detectado texto legível.'}catch(e){status.textContent+=' O OCR não terminou; as notas detectadas foram mantidas.'}}
+ }catch(e){status.textContent='Não foi possível concluir a análise: '+(e&&e.message?e.message:String(e))}
+ finally{releaseMats(mats);btn.disabled=false}
 }
 document.querySelector('#analyze').onclick=runOMR;
 function data(){return{title:document.querySelector('#title').value,lyrics:document.querySelector('#lyrics').value,key:document.querySelector('#key').value,notes,updatedAt:Date.now()}}
