@@ -259,7 +259,32 @@ function snapshot(){history.push(JSON.stringify(notes));if(history.length>30)his
 document.querySelector('#addNote').onclick=()=>{if(!loadedPages.length)return;snapshot();notes.push({x:397,y:560,pitch:64,dur:1});selected=notes.length-1;draw()};
 document.querySelector('#removeNote').onclick=()=>{if(selected<0)return;snapshot();notes.splice(selected,1);selected=-1;draw()};
 document.querySelector('#undo').onclick=()=>{if(history.length){notes=JSON.parse(history.pop());selected=-1;draw()}};
- document.querySelector('#imageFile').onchange=e=>{const files=[...e.target.files];if(!files.length)return;loadedPages=files.map(file=>({file,url:URL.createObjectURL(file)}));const first=new Image();first.onload=()=>{sourceImage=null;sourceWidth=first.naturalWidth;sourceHeight=first.naturalHeight;notes=[];textItems=[];selected=-1;const preview=document.querySelector('#preview');preview.src=loadedPages[0].url;preview.style.display='block';const host=document.querySelector('#a4Pages');host.innerHTML='';loadedPages.forEach((p,i)=>{const page=document.createElement('div');page.className='a4-page';const img=document.createElement('img');img.src=p.url;img.alt='Página '+(i+1);img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block';page.append(img);if(i===0){svg.setAttribute('viewBox','0 0 794 1123');svg.style.cssText='position:absolute;inset:0;width:100%;height:100%;min-width:0;background:transparent;touch-action:pan-y';page.append(svg)}host.append(page)});draw();document.querySelector('#analysisStatus').textContent=files.length+' página(s) carregada(s). A imagem original está visível na folha A4. Clique em Converter para edição.'};first.onerror=()=>document.querySelector('#analysisStatus').textContent='Não foi possível abrir esta imagem. Tente JPG ou PNG.';first.src=loadedPages[0].url;};
+ function showUploadedFiles(fileList){
+ const files=Array.from(fileList||[]).filter(f=>f&&(/^image\\//.test(f.type)||/\\.(png|jpe?g|webp|bmp|tiff?)$/i.test(f.name)));
+ const status=document.querySelector('#analysisStatus');
+ if(!files.length){status.textContent='Seleccione uma imagem JPG, PNG, WEBP ou TIFF.';return}
+ loadedPages.forEach(p=>{try{URL.revokeObjectURL(p.url)}catch(e){}});
+ loadedPages=files.map(file=>({file,url:URL.createObjectURL(file)}));
+ notes=[];textItems=[];selected=-1;selectedText=-1;sourceImage=null;
+ const host=document.querySelector('#a4Pages');host.replaceChildren();
+ status.textContent='A abrir '+files.length+' página(s)...';
+ let completed=0,failed=0;
+ loadedPages.forEach((p,i)=>{
+  const page=document.createElement('div');page.className='a4-page';page.dataset.page=String(i+1);
+  const img=document.createElement('img');img.alt='Partitura carregada — página '+(i+1);
+  img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;background:white';
+  img.onload=()=>{completed++;if(i===0){sourceWidth=img.naturalWidth;sourceHeight=img.naturalHeight}if(completed+failed===loadedPages.length)status.textContent=failed?('Carregadas '+completed+' de '+loadedPages.length+' páginas. '+failed+' ficheiro(s) não abriram.'):('Imagem apresentada integralmente em '+completed+' folha(s) A4. Agora clique em Converter para edição.');};
+  img.onerror=()=>{failed++;if(completed+failed===loadedPages.length)status.textContent='Não foi possível abrir '+failed+' imagem(ns). Converta para JPG ou PNG.'};
+  img.src=p.url;page.append(img);
+  if(i===0){svg.setAttribute('viewBox','0 0 794 1123');svg.style.cssText='position:absolute;inset:0;width:100%;height:100%;min-width:0;background:transparent;touch-action:pan-y';page.append(svg)}
+  host.append(page);
+ });
+ draw();
+ document.querySelector('#title').value=files[0].name.replace(/\\.[^.]+$/,'')||'Minha partitura';
+ document.querySelector('#a4Pages').scrollTop=0;
+}
+document.querySelector('#imageFile').addEventListener('change',e=>showUploadedFiles(e.target.files));
+document.querySelector('#topImage').addEventListener('change',e=>showUploadedFiles(e.target.files));
 
 // OMR melhorado: detecção de vários sistemas, remoção morfológica das linhas,
 // componentes candidatos a cabeças de notas, quantização diatónica e OCR assistido.
@@ -357,7 +382,7 @@ let ctx=null,osc=[];document.querySelector('#play').onclick=()=>{document.queryS
 document.querySelector('#stop').onclick=()=>{osc.forEach(o=>{try{o.stop()}catch(e){}});osc=[]};
 document.querySelector('#wav').onclick=()=>{let rate=44100,duration=Math.max(1,notes.length*.5),buf=new ArrayBuffer(44+rate*duration*2),v=new DataView(buf);function str(o,s){for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))}str(0,'RIFF');v.setUint32(4,36+rate*duration*2,true);str(8,'WAVE');str(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);str(36,'data');v.setUint32(40,rate*duration*2,true);let pos=44;notes.forEach((n,i)=>{let f=440*Math.pow(2,(n.pitch-69)/12);for(let j=0;j<rate*.5;j++){let env=Math.min(1,j/500,(rate*.5-j)/3000);v.setInt16(pos,Math.max(-1,Math.min(1,Math.sin(2*Math.PI*f*j/rate)*.25*env))*32767,true);pos+=2}});download(new Blob([buf],{type:'audio/wav'}),'partitura.wav')};
 
-document.querySelector('#topImage').addEventListener('change',e=>{const dt=new DataTransfer();[...e.target.files].forEach(file=>dt.items.add(file));const input=document.querySelector('#imageFile');input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));});
+
 document.querySelector('#topAnalyze').onclick=()=>document.querySelector('#analyze').click();
 document.querySelector('#topSave').onclick=saveScore;
 document.querySelector('#topExport').onclick=()=>window.print();
