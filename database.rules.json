@@ -1,0 +1,31 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "partituras": {
+      ".read": true,
+      "$scoreId": {
+        ".write": "newData.exists()",
+        ".validate": "newData.hasChildren(['title','lyrics','key','notes','updatedAt'])",
+        "title": {
+          ".validate": "newData.isString() && newData.val().length <= 160"
+        },
+        "lyrics": {
+          ".validate": "newData.isString() && newData.val().length <= 20000"
+        },
+        "key": {
+          ".validate": "newData.isString() && newData.val().length <= 40"
+        },
+        "notes": {
+          ".validate": "newData.hasChildren() && newData.numChildren() <= 2000"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}
