@@ -19,7 +19,7 @@
               ".validate": "newData.isString() && newData.val().length <= 40"
             },
             "notes": {
-              ".validate": "newData.hasChildren() && newData.numChildren() <= 2000"
+              ".validate": "newData.isList() || newData.isMap()"
             },
             "updatedAt": {
               ".validate": "newData.isNumber()"
