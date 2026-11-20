@@ -18,9 +18,6 @@
             "key": {
               ".validate": "newData.isString() && newData.val().length <= 40"
             },
-            "notes": {
-              ".validate": "newData.isList() || newData.isMap()"
-            },
             "updatedAt": {
               ".validate": "newData.isNumber()"
             },
